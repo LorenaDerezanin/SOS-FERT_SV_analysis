@@ -10,15 +10,14 @@
 * DU6P -> ProtL
 * DUhLB ->TmPL
 
-#### SV analysis done on 60 samples (50 + 10 re-seq) with genome coverage ~20x
+#### SV test run done on 60 samples (50 + 10 re-seq) with genome coverage ~20x
 #### SV joint call for each line with Manta
 
 ### to-do:
-  - Manta joint call for additioanlly sequenced 90 samples (15 samples per line) at ~5x coverage 
-  - Whamg call for both sample sets separately
-  - Lumpy call for both sample sets separately
+  - svtools joint call on all 150 samples in the cohort
+  - Manta joint call for 25 samples per line
   - formatting
   - filtering
   - genotyping
   - survivor intersect
-  - check if the same pattern occurs
+  - check if the same SV pattern occurs in both high fertility lines
