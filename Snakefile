@@ -13,5 +13,8 @@
 # 150 samples in the cohort (6 lines/populations)
 # SV caller: svtools(Lumpy + CNVnator)
 
- 
+
+
+
+## STRUCTURAL VARIANT ANNOTATION ## 
 
