@@ -2,8 +2,7 @@
 
 # author: Lorena Derezanin
 # date: 5/11/2020
-# snakemake pipeline
-# run in conda env snakemake
+# run in conda env snakemake 
 
 ###################################################################################################################
 
@@ -17,25 +16,40 @@
 # snakefiles = "snakefiles/"
 # include: snakefiles + "align"
 # include: snakefiles + "smoove"
+
 # rule all:
 # input:
-# "smoove/results/genotyped/paste/cohort.smoove.square.anno.vcf.gz",
-# "indexcov/index.html" 
+# # "/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove/genotyped_results/paste/cohort.smoove.square.anno.vcf.gz"
 
 
 
 REF="/home/fb4/derezanin/sos-fert/reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
+BAM1="/home/fb4/derezanin/sos-fert/03_alignments_raw2/merged"
+BAM2="/home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output"
+EXCLUDE="/home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output/I34772-L1_S63_L003.sorted.RG.dedup.bqsr.bam"
+OUT="/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove"
 GFF=""
 
 rule variant_call:
-input:
-    "$REF/"
-    " "
-output:
-    ""
-shell:
-    "svtools {input} | "
 
+# create list of samples with their paths https://www.biostars.org/p/451548/
+
+input:"$BAM1/{sample}.merged.sorted.dedup.bam",
+      "$BAM2/{sample}.sorted.RG.dedup.bqsr.bam"
+   
+output:"$OUT/genotyped_results/{sample}_smoove_gt.vcf.gz"
+
+# conda:
+
+
+shell:"conda activate smoove",
+      "smoove call --outdir $OUT/genotyped_results/ --exclude {EXCLUDE} \
+      --name {wildcards.sample} --fasta {REF} -p 1 --genotype {input} \
+      --copynumber "
+
+
+
+export TMPDIR=/path/to/big
 
 
 
