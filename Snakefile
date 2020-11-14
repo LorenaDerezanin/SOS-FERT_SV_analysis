@@ -19,7 +19,7 @@
 # include: snakefiles + "smoove"
 
 rule all:
-input:"/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove/genotyped_results/paste/cohort.smoove.square.anno.vcf.gz"
+input:"/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove/genotyped_results/paste/mice_cohort.smoove.square.anno.vcf.gz"
 
 
 
@@ -28,7 +28,7 @@ BAM1="/home/fb4/derezanin/sos-fert/03_alignments_raw2/merged",
 # BAM2="/home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output"
 # EXCLUDE="/home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output/I34772-L1_S63_L003.sorted.RG.dedup.bqsr.bam"
 OUT="/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove"
-
+GFF="/home/fb4/derezanin/sos-fert/20_structural_variants/structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
 
 # add step for filtering out complex regions and gaps in ref. genome
 
@@ -75,13 +75,17 @@ shell:"""
 
 rule paste:
     input: vcf="$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
-    output:"$OUT/genotyped_results/paste/cohort.vcf.gz"
+    output:"$OUT/genotyped_results/paste/mice_cohort.vcf.gz"
 
 
-
+shell:"smoove paste --name mice_cohort {input.vcf}" 
 
 
 ## STRUCTURAL VARIANT ANNOTATION ## 
 
+rule annotate:
+    input:"$OUT/genotyped_results/paste/mice_cohort.vcf.gz"
+    output:"$OUT/genotyped_results/paste/mice_cohort.smoove.square.anno.vcf.gz"
 
+shell:"smoove annotate --gff {GFF} {input} | bgzip -c > {output}" 
 
