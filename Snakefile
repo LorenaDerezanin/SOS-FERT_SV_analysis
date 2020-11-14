@@ -32,15 +32,12 @@ OUT="/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove"
 
 # add step for filtering out complex regions and gaps in ref. genome
 
-
-rule variant_call:
-
 # create list of samples with their paths https://www.biostars.org/p/451548/
 
-input:"$BAM1/{sample}.merged.sorted.dedup.bam"
+rule variant_call:
+    input:"$BAM1/{sample}.merged.sorted.dedup.bam"
       # "$BAM2/{sample}.sorted.RG.dedup.bqsr.bam"
-   
-output:"$OUT/genotyped_results/{sample}_smoove_gt.vcf.gz"
+    output:"$OUT/genotyped_results/{sample}_smoove_genotyped.vcf.gz"
 
 # conda: recreate the env from yml
 
@@ -52,6 +49,33 @@ shell:"""
       """
 
 
+rule merge:
+    input: vcf="$OUT/genotyped_results/{sample}_smoove_genotyped.vcf.gz"
+    output: "$OUT/genotyped_results/all_samples_merged.vcf.gz"
+
+
+shell:"""
+      conda activate smoove
+      smoove merge --name all_samples_merged -f {REF} --outdir $OUT/genotyped_results/
+      {input.vcf}
+      """
+
+
+rule genotype:
+    input: merge="$OUT/genotyped_results/all_samples_merged.vcf.gz",
+           bam="$BAM1/{sample}.merged.sorted.dedup.bam"
+    output:"$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
+
+
+shell:"""
+      smoove genotype -d -x -p 1 --name {wildcards.sample}_joint –outdir \
+      $OUT/genotyped_results/ --fasta {REF} --vcf {input.merge} {input.bam}
+      """
+
+
+rule paste:
+    input: vcf="$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
+    output:"$OUT/genotyped_results/paste/cohort.vcf.gz"
 
 
 
