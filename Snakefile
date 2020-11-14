@@ -4,6 +4,7 @@
 # date: 5/11/2020
 # run in conda env snakemake 
 # snakemake v.5.28
+# check snakefile status with snakemake --lint
 
 ###################################################################################################################
 
@@ -11,24 +12,18 @@
 # 150 samples in the cohort (6 lines/populations)
 # SV caller: svtools(Lumpy + CNVnator)
 
+## bam2 /home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output
+## exclude /home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output/I34772-L1_S63_L003.sorted.RG.dedup.bqsr.bam
 
-# Snakefile1 main rules:
-# SAMPLES = ["Sample1", "Sample2"]
-# snakefiles = "snakefiles/"
-# include: snakefiles + "align"
-# include: snakefiles + "smoove"
 
 rule all:
-input:"/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove/genotyped_results/paste/mice_cohort.smoove.square.anno.vcf.gz"
+input:"../../03_smoove/genotyped_results/paste/mice_cohort.smoove.square.anno.vcf.gz"
 
 
-
-REF="/home/fb4/derezanin/sos-fert/reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa",
-BAM1="/home/fb4/derezanin/sos-fert/03_alignments_raw2/merged",
-# BAM2="/home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output"
-# EXCLUDE="/home/fb4/derezanin/sos-fert/GitHub/WGS_analysis_mmu/batch3/05_alignments_addRG_dedup_bqsr/output/I34772-L1_S63_L003.sorted.RG.dedup.bqsr.bam"
-OUT="/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove"
-GFF="/home/fb4/derezanin/sos-fert/20_structural_variants/structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
+REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa",
+BAM1="../../../03_alignments_raw2/merged",
+OUT="../../03_smoove",
+GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
 
 # add step for filtering out complex regions and gaps in ref. genome
 
@@ -45,7 +40,7 @@ shell:"""
       conda activate smoove
       export TMPDIR=/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove
       smoove call --outdir $OUT/genotyped_results/ --excludechroms '~^GL,~^JH' \
-      --name {wildcards.sample} --fasta {REF} -p 2 --genotype {input}
+      --name {wildcards.sample} --fasta {REF} -p 1 --genotype {input}
       """
 
 
