@@ -45,29 +45,27 @@ GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
 
 rule all:
     input:
-      expand("01_mice_lines_smoove/{sample}.smoove.vcf", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.smoove.vcf.gz", sample=config["samples"]),
       expand("logs/smoove/{sample}.sv_call.log", sample=config["samples"])
 
 
 rule smoove_sv_call:
     input:
       lambda wildcards: config["samples"][wildcards.sample]
-      # expand("path/{sample}"
-      #   "batch1/H07792-L1.merged.sorted.dedup.bqsr.bam"
-      # exclude=
     output:
-      "01_mice_lines_smoove/{sample}.smoove.vcf"
+      "01_mice_lines_smoove/{sample}.smoove.vcf.gz"
     log:
       "logs/smoove/{sample}.sv_call.log"
     params:
-      outdir="01_mice_lines_smoove"
+      outdir="01_mice_lines_smoove",
+      bed="Mus_musculus.GRCm38_output_ranges.bed"
     conda:
       "envs/smoove.yml"
     threads: 1
     shell:
-      "smoove call --outdir {params.outdir}  --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input}"
+      "smoove call --outdir {params.outdir}  --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input}"
 
-# --exclude {exclude}
+
 
 
 
