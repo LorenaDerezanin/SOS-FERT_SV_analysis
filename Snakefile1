@@ -1,0 +1,142 @@
+### STRUCTURAL VARIATION ANALYSIS ###
+
+# author: Lorena Derezanin
+# date: 5/11/2020
+# run in conda env snakemake 
+# snakemake v.5.28
+# check snakefile status with snakemake --lint
+# snakemake -np --use-conda --cores --verbose -s Snakefile1
+
+###################################################################################################################
+
+## mice reads mapped to mice reference genome (Mus_musculus.GRCm38) with BWA
+# 150 samples in the cohort (6 lines/populations)
+# SV caller: smoove(Lumpy + svtools + CNVnator/CNVpythor)
+
+
+#### prepare config file with sample IDs and relative paths(from snakefiles) to sample bam files 
+
+# WD="$HOME/sos-fert/20_structural_variants/git/SOS-FERT_SV_analysis"
+
+# # batch1 (remove 10 samples that have been re-sequenced in batch2)
+# ls *.bam | awk -F- '{print $1 ": batch1/" $0}' > $WD/config1.yaml
+
+# # batch2 (10 re-seq samples)
+# ls *.bam | awk -F. '{print $1 ": batch2/" $0}' > $WD/config2.yaml
+
+# # batch3 (remove sample: I34772-L1_S63_L003)
+# ls *.bam | awk -F- '{print $1 ": batch3/" $0}' > $WD/config3.yaml 
+
+# #cat config files
+# cat config1.yaml config2.yaml config3.yaml >> config.yaml
+
+
+#### extract gap regions/low complexity regions in ref. genome
+
+# python generate_masked_ranges.py Mus_musculus.GRCm38.dna.primary_assembly.fa > Mus_musculus.GRCm38_output_ranges.bed
+
+
+###################################################################################################################
+
+configfile: "config.yaml"
+
+REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
+GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
+
+rule all:
+    input:
+      expand("01_mice_lines_smoove/{sample}.smoove.vcf", sample=config["samples"]),
+      expand("logs/smoove/{sample}.sv_call.log", sample=config["samples"])
+
+
+rule smoove_sv_call:
+    input:
+      lambda wildcards: config["samples"][wildcards.sample]
+      # expand("path/{sample}"
+      #   "batch1/H07792-L1.merged.sorted.dedup.bqsr.bam"
+      # exclude=
+    output:
+      "01_mice_lines_smoove/{sample}.smoove.vcf"
+    log:
+      "logs/smoove/{sample}.sv_call.log"
+    params:
+      outdir="01_mice_lines_smoove"
+    conda:
+      "envs/smoove.yml"
+    threads: 1
+    shell:
+      "smoove call --outdir {params.outdir}  --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input}"
+
+# --exclude {exclude}
+
+
+
+
+
+
+# # create list of samples with their paths https://www.biostars.org/p/451548/
+
+# rule variant_call:
+#     input:"$BAM1/{sample}.merged.sorted.dedup.bam"
+#       # "$BAM2/{sample}.sorted.RG.dedup.bqsr.bam"
+#     output:"$OUT/genotyped_results/{sample}_smoove_genotyped.vcf.gz"
+
+# # conda: recreate the env from yml
+
+# shell:"""
+#       conda activate smoove; \
+#       export TMPDIR=/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove; \
+#       smoove call --outdir $OUT/genotyped_results/ --excludechroms '~^GL,~^JH' \
+#       --name {wildcards.sample} --fasta {REF} -p 1 --genotype {input}
+#       """
+
+
+# rule merge:
+#     input: vcf="$OUT/genotyped_results/{sample}_smoove_genotyped.vcf.gz"
+#     output: "$OUT/genotyped_results/all_samples_merged.vcf.gz"
+
+
+# shell:"""
+#       conda activate smoove
+#       smoove merge --name all_samples_merged -f {REF} --outdir $OUT/genotyped_results/
+#       {input.vcf}
+#       """
+
+
+# rule genotype:
+#     input: merge="$OUT/genotyped_results/all_samples_merged.vcf.gz",
+#            bam="$BAM1/{sample}.merged.sorted.dedup.bam"
+#     output:"$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
+
+
+# shell:"""
+#       smoove genotype -d -x -p 1 --name {wildcards.sample}_joint –outdir \
+#       $OUT/genotyped_results/ --fasta {REF} --vcf {input.merge} {input.bam}
+#       """
+
+
+# rule paste:
+#     input: vcf="$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
+#     output:"$OUT/genotyped_results/paste/mice_cohort.vcf.gz"
+
+
+# shell:"smoove paste --name mice_cohort {input.vcf}" 
+
+
+# ## STRUCTURAL VARIANT ANNOTATION ## 
+
+# rule annotate:
+#     input:"$OUT/genotyped_results/paste/mice_cohort.vcf.gz"
+#     output:"$OUT/genotyped_results/paste/mice_cohort.smoove.square.anno.vcf.gz"
+
+# shell:"smoove annotate --gff {GFF} {input} | bgzip -c > {output}" 
+
+
+
+
+
+
+
+
+
+
