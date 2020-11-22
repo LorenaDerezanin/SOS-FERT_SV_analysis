@@ -45,7 +45,16 @@ GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
 
 rule all:
     input:
-      expand("01_mice_lines_smoove/{sample}.smoove.vcf.gz", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz.csi", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.disc.bam", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.disc.bam.bai", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.disc.bam.orig.bam", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.split.bam", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.split.bam.bai", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.split.bam.orig.bam", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}-lumpy-cmd.sh", sample=config["samples"]),
+      expand("01_mice_lines_smoove/{sample}.histo", sample=config["samples"]),
       expand("logs/smoove/{sample}.sv_call.log", sample=config["samples"])
 
 
@@ -53,7 +62,16 @@ rule smoove_sv_call:
     input:
       lambda wildcards: config["samples"][wildcards.sample]
     output:
-      "01_mice_lines_smoove/{sample}.smoove.vcf.gz"
+      "01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz",
+      "01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz.csi",
+      "01_mice_lines_smoove/{sample}.disc.bam",
+      "01_mice_lines_smoove/{sample}.disc.bam.bai",
+      "01_mice_lines_smoove/{sample}.disc.bam.orig.bam",
+      "01_mice_lines_smoove/{sample}.split.bam",
+      "01_mice_lines_smoove/{sample}.split.bam.bai",
+      "01_mice_lines_smoove/{sample}.split.bam.orig.bam",
+      "01_mice_lines_smoove/{sample}-lumpy-cmd.sh",
+      "01_mice_lines_smoove/{sample}.histo"
     log:
       "logs/smoove/{sample}.sv_call.log"
     params:
@@ -63,10 +81,10 @@ rule smoove_sv_call:
       "envs/smoove.yml"
     threads: 1
     shell:
-      "smoove call --outdir {params.outdir}  --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input}"
+      "smoove call --outdir {params.outdir}  --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
 
 
-
+# lumpy-filter removes alignments with low mapq, depth > 1000
 
 
 
