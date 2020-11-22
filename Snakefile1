@@ -47,15 +47,16 @@ rule all:
     input:
       expand("01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz", sample=config["samples"]),
       expand("01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz.csi", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.disc.bam", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.disc.bam.bai", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.disc.bam.orig.bam", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.split.bam", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.split.bam.bai", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.split.bam.orig.bam", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.disc.bam", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.disc.bam.bai", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.disc.bam.orig.bam", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.split.bam", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.split.bam.bai", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.split.bam.orig.bam", sample=config["samples"]),
       expand("01_mice_lines_smoove/{sample}-lumpy-cmd.sh", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}.histo", sample=config["samples"]),
+      # expand("01_mice_lines_smoove/{sample}.histo", sample=config["samples"]),
       expand("logs/smoove/{sample}.sv_call.log", sample=config["samples"])
+
 
 
 rule smoove_sv_call:
@@ -64,14 +65,14 @@ rule smoove_sv_call:
     output:
       "01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz",
       "01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz.csi",
-      "01_mice_lines_smoove/{sample}.disc.bam",
-      "01_mice_lines_smoove/{sample}.disc.bam.bai",
-      "01_mice_lines_smoove/{sample}.disc.bam.orig.bam",
-      "01_mice_lines_smoove/{sample}.split.bam",
-      "01_mice_lines_smoove/{sample}.split.bam.bai",
-      "01_mice_lines_smoove/{sample}.split.bam.orig.bam",
-      "01_mice_lines_smoove/{sample}-lumpy-cmd.sh",
-      "01_mice_lines_smoove/{sample}.histo"
+      # "01_mice_lines_smoove/{sample}.disc.bam",
+      # "01_mice_lines_smoove/{sample}.disc.bam.bai",
+      # "01_mice_lines_smoove/{sample}.disc.bam.orig.bam",
+      # "01_mice_lines_smoove/{sample}.split.bam",
+      # "01_mice_lines_smoove/{sample}.split.bam.bai",
+      # "01_mice_lines_smoove/{sample}.split.bam.orig.bam",
+      "01_mice_lines_smoove/{sample}-lumpy-cmd.sh"
+      # "01_mice_lines_smoove/{sample}.histo"
     log:
       "logs/smoove/{sample}.sv_call.log"
     params:
