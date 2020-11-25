@@ -53,6 +53,8 @@ rule all:
     
 
 
+###################################################################################################################
+
 
 ### STRUCTURAL VARIANT CALLING ### 
 
@@ -130,6 +132,9 @@ rule paste:
 
 
 
+###################################################################################################################
+
+
 ### STRUCTURAL VARIANT ANNOTATION ### 
 
 
@@ -161,7 +166,7 @@ rule get_vep_plugins:
 
 
 
-# # annotate final vcf with VEP
+# annotate final vcf with VEP
 rule vep_annotate:
     input:
       calls="01_mice_lines_smoove/pasted/cohort.vcf.gz",  
@@ -182,17 +187,34 @@ rule vep_annotate:
 
 
 
+# download snpeff ref db
+rule get_snpeff_db:
+    output:
+        # wildcard {reference} may be anything listed in `snpeff databases`
+        directory("annotation/snpeff/GRCm38.101")
+    log:
+        "logs/snpeff/snpEff_GRCm38.101_download.log"
+    params:
+        reference="GRCm38.101"
+    wrapper:
+        "0.67.0/bio/snpeff/download"
 
 
-# # annotate final vcf with SnpEff
-# rule snpeff_annotate:
-#   input:
-#   output:
-#   log:
-#   params:
-#   wrapper:
-
-
+# annotate final vcf with SnpEff
+rule snpeff_annotate:
+    input:
+        calls="01_mice_lines_smoove/pasted/cohort.vcf.gz", 
+        db="annotation/snpeff/GRCm38.101" 
+    output:
+        calls="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
+        stats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
+        csvstats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
+    log:
+        "logs/snpeff/annotate.log"
+    params:
+        extra="-Xmx4g"         
+    wrapper:
+        "0.67.0/bio/snpeff/annotate"
 
 
 
