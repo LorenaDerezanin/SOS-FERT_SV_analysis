@@ -28,7 +28,7 @@
 # # batch3 (remove sample: I34772-L1_S63_L003)
 # ls *.bam | awk -F- '{print $1 ": batch3/" $0}' > $WD/config3.yaml 
 
-# #cat config files
+# #cat config files (add "samples:")
 # cat config1.yaml config2.yaml config3.yaml >> config.yaml
 
 
@@ -47,7 +47,10 @@ REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.
 rule all:
     input:
       # expand("01_mice_lines_smoove/genotyped/{sample}-smoove.merged.gt.vcf.gz", sample=config["samples"]),
-      "01_mice_lines_smoove/pasted/cohort.vcf.gz"
+      "01_mice_lines_smoove/pasted/cohort.vcf.gz",
+      "01_mice_lines_smoove/annotated/mice_variants.vep.annotated.vcf",  
+      "01_mice_lines_smoove/annotated/mice_variants.vep.annotated.html"
+    
 
 
 
@@ -109,6 +112,7 @@ rule genotype_merged:
       "smoove genotype -d -x --outdir {params.outdir} --name {wildcards.sample}-joint --fasta {REF} -p {threads} --vcf {input.merged} {input.bams} 2> {log}"        
 
 
+
 # paste all the single sample VCFs with the same number of variants
 rule paste:
     input:
@@ -128,77 +132,60 @@ rule paste:
 
 ### STRUCTURAL VARIANT ANNOTATION ### 
 
-# download new cache version
+
+# download new vep cache version
 rule get_vep_cache:
     output:
-        directory("vep_annotation/vep/cache")
+      directory("vep_annotation/vep/cache")
     params:
-        species="mus_musculus",
-        build="GRCm38",
-        release="101"
+      species="mus_musculus",
+      build="GRCm38",
+      release="101"
     log:
-        "logs/vep/cache.log"
-    cache: True  # save space and time with between workflow caching (see docs)
+      "logs/vep/cache.log"
+    # cache: True 
     wrapper:
-        "0.67.0/bio/vep/cache"
+      "0.67.0/bio/vep/cache"
 
-# download useful plugins
+
+# download vep plugins
 rule get_vep_plugins:
     output:
-        directory("vep_annotation/vep/plugins")
+      directory("vep_annotation/vep/plugins")
+    log:
+      "logs/vep/plugins.log"
     params:
-        release=101
+      release=101
     wrapper:
-        "0.67.0/bio/vep/plugins"
+      "0.67.0/bio/vep/plugins"
 
 
 
 # # annotate final vcf with VEP
 rule vep_annotate:
-  input:
-        calls="01_mice_lines_smoove/pasted/cohort.vcf.gz",  
-        cache="vep_annotation/vep/cache",
-        plugins="resources/vep/plugins",
-        fasta={REF}
-  output:
-        calls="mice_variants.vep.annotated.vcf",  
-        stats="mice_variants.annotated.html"
-  params:
-        # Pass a list of plugins to use, see https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html
-        # Plugin args can be added as well, e.g. via an entry "MyPlugin,1,FOO", see docs.
-        plugins=["LoFtool"],
-        extra="--everything"  # optional: extra arguments
-  log:
-        "logs/vep/annotate.log"
-    threads: 4
-    wrapper:
-        "0.67.0/bio/vep/annotate"
-
-
-  rule annotate_variants:
     input:
-        calls="variants.bcf",  # .vcf, .vcf.gz or .bcf
-        cache="resources/vep/cache",
-        plugins="resources/vep/plugins",
-        # optionally add reference genome fasta to speed up annotation
-        # fasta="genome.fasta",
+      calls="01_mice_lines_smoove/pasted/cohort.vcf.gz",  
+      cache="vep_annotation/vep/cache",
+      plugins="vep_annotation/vep/plugins",
+      fasta={REF}
     output:
-        calls="variants.annotated.bcf",  # .vcf, .vcf.gz or .bcf
-        stats="variants.html"
+      calls="01_mice_lines_smoove/annotated/mice_variants.vep.annotated.vcf",  
+      stats="01_mice_lines_smoove/annotated/mice_variants.vep.annotated.html"
     params:
-        # Pass a list of plugins to use, see https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html
-        # Plugin args can be added as well, e.g. via an entry "MyPlugin,1,FOO", see docs.
-        plugins=["LoFtool"],
-        extra="--everything"  # optional: extra arguments
+      plugins=["GO", "Phenotypes,file=vep_annotation/phenotypes.gff.gz,include_types=Gene & QTL & StructuralVariation"],
+      extra="--coding-only --per_gene --gene_phenotype --refseq --symbol --protein --sift b --overlaps" 
     log:
-        "logs/vep/annotate.log"
+      "logs/vep/annotate.log"
     threads: 4
     wrapper:
-        "0.67.0/bio/vep/annotate"
+      "0.67.0/bio/vep/annotate"
+
+
+
 
 
 # # annotate final vcf with SnpEff
-# rule snp_eff_annotate:
+# rule snpeff_annotate:
 #   input:
 #   output:
 #   log:
