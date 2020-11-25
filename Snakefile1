@@ -5,7 +5,7 @@
 # run in conda env snakemake 
 # snakemake v.5.28
 # check snakefile status with snakemake --lint
-# snakemake -np --use-conda --cores --verbose -s Snakefile1
+# snakemake -np --use-conda --cores 75 --verbose -s Snakefile1
 
 ###################################################################################################################
 
@@ -13,6 +13,7 @@
 # 150 samples in the cohort (6 lines/populations)
 # SV caller: smoove(Lumpy + svtools + CNVnator/CNVpythor)
 
+###################################################################################################################
 
 #### prepare config file with sample IDs and relative paths(from snakefiles) to sample bam files 
 
@@ -41,7 +42,7 @@
 configfile: "config.yaml"
 
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
-GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
+# GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
 
 rule all:
     input:
@@ -50,7 +51,7 @@ rule all:
 
 
 
-# call structural variants
+### STRUCTURAL VARIANT CALLING ### 
 
 rule smoove_sv_call:
     input:
@@ -76,18 +77,18 @@ rule smoove_sv_call:
 # get union of sites across samples 
 rule merge:
     input: 
-      vcf="01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz"
+      vcf=expand("01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz", sample=config["samples"])
     output: 
       "01_mice_lines_smoove/merged/merged.sites.vcf.gz"
     log:
       "logs/smoove/merge.log"
     params:
-      outdir="01_mice_lines_smoove/merged"
+      outdir="01_mice_lines_smoove/merged",
       name="merged"
     conda:
       "envs/smoove.yml"
     shell:
-      "smoove merge --outdir {params.outdir} --name {params.name} --fasta {REF} {input.vcf}"
+      "smoove merge --outdir {params.outdir} --name {params.name} --fasta {REF} {input.vcf} 2> {log}"
 
 
 # genotype each sample at merged sites, run duphold to add depth annotation
@@ -103,8 +104,9 @@ rule genotype_merged:
       outdir="01_mice_lines_smoove/genotyped"
     conda:
       "envs/smoove.yml"
+    threads: 1
     shell:
-      "smoove genotype -d -x --outdir {params.outdir} --name {wildcards.sample}-joint --fasta {REF} -p {threads} --vcf {input.merged} {input.bams}"        
+      "smoove genotype -d -x --outdir {params.outdir} --name {wildcards.sample}-joint --fasta {REF} -p {threads} --vcf {input.merged} {input.bams} 2> {log}"        
 
 
 # paste all the single sample VCFs with the same number of variants
@@ -120,41 +122,89 @@ rule paste:
     conda:
       "envs/smoove.yml"
     shell:
-      "smoove paste --name {params} {input.vcf}"
+      "smoove paste --name {params} {input.vcf} 2> {log}"
 
-# annotate final vcf with VEP
+
+
+### STRUCTURAL VARIANT ANNOTATION ### 
+
+# download new cache version
+rule get_vep_cache:
+    output:
+        directory("vep_annotation/vep/cache")
+    params:
+        species="mus_musculus",
+        build="GRCm38",
+        release="101"
+    log:
+        "logs/vep/cache.log"
+    cache: True  # save space and time with between workflow caching (see docs)
+    wrapper:
+        "0.67.0/bio/vep/cache"
+
+# download useful plugins
+rule get_vep_plugins:
+    output:
+        directory("vep_annotation/vep/plugins")
+    params:
+        release=101
+    wrapper:
+        "0.67.0/bio/vep/plugins"
+
+
+
+# # annotate final vcf with VEP
 rule vep_annotate:
   input:
+        calls="01_mice_lines_smoove/pasted/cohort.vcf.gz",  
+        cache="vep_annotation/vep/cache",
+        plugins="resources/vep/plugins",
+        fasta={REF}
   output:
-  log:
+        calls="mice_variants.vep.annotated.vcf",  
+        stats="mice_variants.annotated.html"
   params:
-  wrapper:
-
-
-# annotate final vcf with SnpEff
-rule snp_eff_annotate:
-  input:
-  output:
+        # Pass a list of plugins to use, see https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html
+        # Plugin args can be added as well, e.g. via an entry "MyPlugin,1,FOO", see docs.
+        plugins=["LoFtool"],
+        extra="--everything"  # optional: extra arguments
   log:
-  params:
-  wrapper:
+        "logs/vep/annotate.log"
+    threads: 4
+    wrapper:
+        "0.67.0/bio/vep/annotate"
 
 
-# rule paste:
-#     input: vcf="$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
-#     output:"$OUT/genotyped_results/paste/mice_cohort.vcf.gz"
+  rule annotate_variants:
+    input:
+        calls="variants.bcf",  # .vcf, .vcf.gz or .bcf
+        cache="resources/vep/cache",
+        plugins="resources/vep/plugins",
+        # optionally add reference genome fasta to speed up annotation
+        # fasta="genome.fasta",
+    output:
+        calls="variants.annotated.bcf",  # .vcf, .vcf.gz or .bcf
+        stats="variants.html"
+    params:
+        # Pass a list of plugins to use, see https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html
+        # Plugin args can be added as well, e.g. via an entry "MyPlugin,1,FOO", see docs.
+        plugins=["LoFtool"],
+        extra="--everything"  # optional: extra arguments
+    log:
+        "logs/vep/annotate.log"
+    threads: 4
+    wrapper:
+        "0.67.0/bio/vep/annotate"
 
 
-# shell:"smoove paste --name mice_cohort {input.vcf}" 
+# # annotate final vcf with SnpEff
+# rule snp_eff_annotate:
+#   input:
+#   output:
+#   log:
+#   params:
+#   wrapper:
 
-
-# ## STRUCTURAL VARIANT ANNOTATION ## 
-
-# rule annotate:
-#     input:"$OUT/genotyped_results/paste/mice_cohort.vcf.gz"
-#     output:"$OUT/genotyped_results/paste/mice_cohort.smoove.square.anno.vcf.gz"
-
-# shell:"smoove annotate --gff {GFF} {input} | bgzip -c > {output}" 
 
 
 
