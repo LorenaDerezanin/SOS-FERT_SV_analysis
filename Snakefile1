@@ -45,91 +45,99 @@ GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
 
 rule all:
     input:
-      expand("01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz.csi", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.disc.bam", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.disc.bam.bai", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.disc.bam.orig.bam", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.split.bam", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.split.bam.bai", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.split.bam.orig.bam", sample=config["samples"]),
-      expand("01_mice_lines_smoove/{sample}-lumpy-cmd.sh", sample=config["samples"]),
-      # expand("01_mice_lines_smoove/{sample}.histo", sample=config["samples"]),
-      expand("logs/smoove/{sample}.sv_call.log", sample=config["samples"])
+      # expand("01_mice_lines_smoove/genotyped/{sample}-smoove.merged.gt.vcf.gz", sample=config["samples"]),
+      "01_mice_lines_smoove/pasted/cohort.vcf.gz"
 
 
+
+# call structural variants
 
 rule smoove_sv_call:
     input:
       lambda wildcards: config["samples"][wildcards.sample]
     output:
-      "01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz",
-      "01_mice_lines_smoove/{sample}-smoove.genotyped.vcf.gz.csi",
-      # "01_mice_lines_smoove/{sample}.disc.bam",
-      # "01_mice_lines_smoove/{sample}.disc.bam.bai",
-      # "01_mice_lines_smoove/{sample}.disc.bam.orig.bam",
-      # "01_mice_lines_smoove/{sample}.split.bam",
-      # "01_mice_lines_smoove/{sample}.split.bam.bai",
-      # "01_mice_lines_smoove/{sample}.split.bam.orig.bam",
-      "01_mice_lines_smoove/{sample}-lumpy-cmd.sh"
-      # "01_mice_lines_smoove/{sample}.histo"
+      "01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz",
+      "01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz.csi",
+      "01_mice_lines_smoove/results/{sample}-lumpy-cmd.sh"
     log:
       "logs/smoove/{sample}.sv_call.log"
     params:
-      outdir="01_mice_lines_smoove",
+      outdir="01_mice_lines_smoove/results",
       bed="Mus_musculus.GRCm38_output_ranges.bed"
     conda:
       "envs/smoove.yml"
     threads: 1
     shell:
-      "smoove call --outdir {params.outdir}  --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
-
+      "smoove call --outdir {params.outdir} --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
 
 # lumpy-filter removes alignments with low mapq, depth > 1000
 
 
+# get union of sites across samples 
+rule merge:
+    input: 
+      vcf="01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz"
+    output: 
+      "01_mice_lines_smoove/merged/merged.sites.vcf.gz"
+    log:
+      "logs/smoove/merge.log"
+    params:
+      outdir="01_mice_lines_smoove/merged"
+      name="merged"
+    conda:
+      "envs/smoove.yml"
+    shell:
+      "smoove merge --outdir {params.outdir} --name {params.name} --fasta {REF} {input.vcf}"
 
 
-
-# # create list of samples with their paths https://www.biostars.org/p/451548/
-
-# rule variant_call:
-#     input:"$BAM1/{sample}.merged.sorted.dedup.bam"
-#       # "$BAM2/{sample}.sorted.RG.dedup.bqsr.bam"
-#     output:"$OUT/genotyped_results/{sample}_smoove_genotyped.vcf.gz"
-
-# # conda: recreate the env from yml
-
-# shell:"""
-#       conda activate smoove; \
-#       export TMPDIR=/home/fb4/derezanin/sos-fert/20_structural_variants/03_smoove; \
-#       smoove call --outdir $OUT/genotyped_results/ --excludechroms '~^GL,~^JH' \
-#       --name {wildcards.sample} --fasta {REF} -p 1 --genotype {input}
-#       """
-
-
-# rule merge:
-#     input: vcf="$OUT/genotyped_results/{sample}_smoove_genotyped.vcf.gz"
-#     output: "$OUT/genotyped_results/all_samples_merged.vcf.gz"
+# genotype each sample at merged sites, run duphold to add depth annotation
+rule genotype_merged:
+    input:
+      merged="01_mice_lines_smoove/merged/merged.sites.vcf.gz",
+      bams=lambda wildcards: config["samples"][wildcards.sample]
+    output:
+      "01_mice_lines_smoove/genotyped/{sample}-joint-smoove.genotyped.vcf.gz"
+    log:
+      "logs/smoove/{sample}.merged.genotyped.log"
+    params:
+      outdir="01_mice_lines_smoove/genotyped"
+    conda:
+      "envs/smoove.yml"
+    shell:
+      "smoove genotype -d -x --outdir {params.outdir} --name {wildcards.sample}-joint --fasta {REF} -p {threads} --vcf {input.merged} {input.bams}"        
 
 
-# shell:"""
-#       conda activate smoove
-#       smoove merge --name all_samples_merged -f {REF} --outdir $OUT/genotyped_results/
-#       {input.vcf}
-#       """
+# paste all the single sample VCFs with the same number of variants
+rule paste:
+    input:
+      vcf=expand("01_mice_lines_smoove/genotyped/{sample}-joint-smoove.genotyped.vcf.gz", sample=config["samples"])
+    output:
+      "01_mice_lines_smoove/pasted/cohort.vcf.gz"
+    log:
+      "logs/smoove/paste.log"
+    params:
+      "cohort"
+    conda:
+      "envs/smoove.yml"
+    shell:
+      "smoove paste --name {params} {input.vcf}"
+
+# annotate final vcf with VEP
+rule vep_annotate:
+  input:
+  output:
+  log:
+  params:
+  wrapper:
 
 
-# rule genotype:
-#     input: merge="$OUT/genotyped_results/all_samples_merged.vcf.gz",
-#            bam="$BAM1/{sample}.merged.sorted.dedup.bam"
-#     output:"$OUT/genotyped_results/{sample}_joint_smoove_genotyped.vcf.gz"
-
-
-# shell:"""
-#       smoove genotype -d -x -p 1 --name {wildcards.sample}_joint –outdir \
-#       $OUT/genotyped_results/ --fasta {REF} --vcf {input.merge} {input.bam}
-#       """
+# annotate final vcf with SnpEff
+rule snp_eff_annotate:
+  input:
+  output:
+  log:
+  params:
+  wrapper:
 
 
 # rule paste:
