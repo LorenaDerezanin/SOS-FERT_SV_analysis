@@ -144,7 +144,7 @@ rule paste:
 # download new vep cache version
 rule get_vep_cache:
     output:
-      directory("vep_annotation/vep/cache")
+      directory("annotation/vep/cache")
     params:
       species="mus_musculus",
       build="GRCm38",
@@ -159,7 +159,7 @@ rule get_vep_cache:
 # download vep plugins
 rule get_vep_plugins:
     output:
-      directory("vep_annotation/vep/plugins")
+      directory("annotation/vep/plugins")
     log:
       "logs/vep/plugins.log"
     params:
@@ -173,14 +173,14 @@ rule get_vep_plugins:
 rule vep_annotate:
     input:
       calls="01_mice_lines_smoove/pasted/cohort.smoove.square.vcf.gz",  
-      cache="vep_annotation/vep/cache",
-      plugins="vep_annotation/vep/plugins",
+      cache="annotation/vep/cache",
+      plugins="annotation/vep/plugins",
       fasta={REF}
     output:
       calls="01_mice_lines_smoove/annotated/mice_variants.vep.annotated.vcf",  
       stats="01_mice_lines_smoove/annotated/mice_variants.vep.annotated.html"
     params:
-      plugins=["GO", "Phenotypes,file=vep_annotation/phenotypes.gff.gz,include_types=Gene & QTL & StructuralVariation"],
+      plugins=["GO", "Phenotypes,file=annotation/vep/phenotypes.gff.gz,include_types=Gene & QTL & StructuralVariation"],
       extra="--coding-only --per_gene --gene_phenotype --refseq --symbol --protein --sift b --overlaps" 
     log:
       "logs/vep/annotate.log"
@@ -193,7 +193,6 @@ rule vep_annotate:
 # download snpeff ref db
 rule get_snpeff_db:
     output:
-        # wildcard {reference} may be anything listed in `snpeff databases`
         directory("annotation/snpeff/GRCm38.101")
     log:
         "logs/snpeff/snpEff_GRCm38.101_download.log"
