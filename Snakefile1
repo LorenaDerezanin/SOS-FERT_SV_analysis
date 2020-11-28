@@ -47,12 +47,12 @@ REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.
 rule all:
     input:
       # expand("01_mice_lines_smoove/genotyped/{sample}-smoove.merged.gt.vcf.gz", sample=config["samples"]),
-      "01_mice_lines_smoove/pasted/cohort.smoove.square.vcf.gz",
-      "01_mice_lines_smoove/annotated/mice_variants.vep.annotated.vcf",  
-      "01_mice_lines_smoove/annotated/mice_variants.vep.annotated.html",
-      "01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
-      "01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
-      "01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
+      "01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf.gz",
+      "01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.vcf",  
+      "01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.html"
+      # "01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
+      # "01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
+      # "01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
     
 
 
@@ -65,13 +65,13 @@ rule smoove_sv_call:
     input:
       lambda wildcards: config["samples"][wildcards.sample]
     output:
-      "01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz",
-      "01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz.csi",
-      "01_mice_lines_smoove/results/{sample}-lumpy-cmd.sh"
+      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz",
+      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz.csi",
+      "01_mice_lines_smoove/01_results/{sample}-lumpy-cmd.sh"
     log:
       "logs/smoove/{sample}.sv_call.log"
     params:
-      outdir="01_mice_lines_smoove/results",
+      outdir="01_mice_lines_smoove/01_results",
       bed="Mus_musculus.GRCm38_output_ranges.bed"
     conda:
       "envs/smoove.yml"
@@ -85,13 +85,13 @@ rule smoove_sv_call:
 # get union of sites across samples 
 rule merge:
     input: 
-      vcf=expand("01_mice_lines_smoove/results/{sample}-smoove.genotyped.vcf.gz", sample=config["samples"])
+      vcf=expand("01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz", sample=config["samples"])
     output: 
-      "01_mice_lines_smoove/merged/merged.sites.vcf.gz"
+      "01_mice_lines_smoove/02_merged/merged.sites.vcf.gz"
     log:
       "logs/smoove/merge.log"
     params:
-      outdir="01_mice_lines_smoove/merged",
+      outdir="01_mice_lines_smoove/02_merged",
       name="merged"
     conda:
       "envs/smoove.yml"
@@ -102,14 +102,14 @@ rule merge:
 # genotype each sample at merged sites, run duphold to add depth annotation
 rule genotype_merged:
     input:
-      merged="01_mice_lines_smoove/merged/merged.sites.vcf.gz",
+      merged="01_mice_lines_smoove/02_merged/merged.sites.vcf.gz",
       bams=lambda wildcards: config["samples"][wildcards.sample]
     output:
-      "01_mice_lines_smoove/genotyped/{sample}-joint-smoove.genotyped.vcf.gz"
+      "01_mice_lines_smoove/03_genotyped/{sample}-joint-smoove.genotyped.vcf.gz"
     log:
       "logs/smoove/{sample}.merged.genotyped.log"
     params:
-      outdir="01_mice_lines_smoove/genotyped"
+      outdir="01_mice_lines_smoove/03_genotyped"
     conda:
       "envs/smoove.yml"
     threads: 1
@@ -121,9 +121,9 @@ rule genotype_merged:
 # paste all the single sample VCFs with the same number of variants
 rule paste:
     input:
-      vcf=expand("01_mice_lines_smoove/genotyped/{sample}-joint-smoove.genotyped.vcf.gz", sample=config["samples"])
+      vcf=expand("01_mice_lines_smoove/03_genotyped/{sample}-joint-smoove.genotyped.vcf.gz", sample=config["samples"])
     output:
-      "01_mice_lines_smoove/pasted/cohort.smoove.square.vcf.gz"
+      "01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf.gz"
     log:
       "logs/smoove/paste.log"
     params:
@@ -172,51 +172,78 @@ rule get_vep_plugins:
 # annotate final vcf with VEP
 rule vep_annotate:
     input:
-      calls="01_mice_lines_smoove/pasted/cohort.smoove.square.vcf.gz",  
+      calls="01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf.gz",  
       cache="annotation/vep/cache",
       plugins="annotation/vep/plugins",
       fasta={REF}
     output:
-      calls="01_mice_lines_smoove/annotated/mice_variants.vep.annotated.vcf",  
-      stats="01_mice_lines_smoove/annotated/mice_variants.vep.annotated.html"
+      calls="01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.vcf",  
+      stats="01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.html"
     params:
-      plugins=["GO", "Phenotypes,file=annotation/vep/phenotypes.gff.gz,include_types=Gene & QTL & StructuralVariation"],
-      extra="--coding-only --per_gene --gene_phenotype --refseq --symbol --protein --sift b --overlaps" 
+      plugin=["GO"],
+      extra="--coding_only --per_gene --gene_phenotype --refseq --symbol --protein --sift b --overlaps" 
     log:
       "logs/vep/annotate.log"
     threads: 4
     wrapper:
       "0.67.0/bio/vep/annotate"
 
+#### use conda vep instead of the wrapper
+
+rule vep_annotate_conda:
+    input:
+      calls="01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf.gz",  
+      cache="annotation/vep/cache",
+      plugins="annotation/vep/plugins"
+    output:
+      calls="01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.vcf",  
+      stats="01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.html"
+    params:
+      plugin=["GO"],
+      extra="--coding_only --per_gene --gene_phenotype --refseq --symbol --protein --sift b --overlaps" 
+    log:
+      "logs/vep/annotate.log"
+    threads: 4
+    conda:
+      "envs/vep.yml"
+    shell:
+    "vep {input.calls} {input.cache} {input.plugins} --fasta {REF} {params.extra} {params.plugin} --o {output.calls} --sf {output.stats} 2> {log}"
+
+
+
+
+
+
+# "Phenotypes,file=annotation/vep/phenotypes.gff.gz,include_types=Gene"],
 
 
 # download snpeff ref db
-rule get_snpeff_db:
-    output:
-        directory("annotation/snpeff/GRCm38.101")
-    log:
-        "logs/snpeff/snpEff_GRCm38.101_download.log"
-    params:
-        reference="GRCm38.101"
-    wrapper:
-        "0.67.0/bio/snpeff/download"
+# rule get_snpeff_db:
+#     output:
+#         directory("annotation/snpeff/GRCm38.101")
+#     log:
+#         "logs/snpeff/snpEff_GRCm38.101_download.log"
+#     params:
+#         reference="GRCm38.101"
+#     wrapper:
+#         "0.67.0/bio/snpeff/download"
 
 
 # annotate final vcf with SnpEff
-rule snpeff_annotate:
-    input:
-        calls="01_mice_lines_smoove/pasted/cohort.smoove.square.vcf.gz", 
-        db="annotation/snpeff/GRCm38.101" 
-    output:
-        calls="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
-        stats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
-        csvstats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
-    log:
-        "logs/snpeff/annotate.log"
-    params:
-        extra="-Xmx4g"         
-    wrapper:
-        "0.67.0/bio/snpeff/annotate"
+# rule snpeff_annotate:
+#     input:
+#         calls="01_mice_lines_smoove/pasted/cohort.smoove.square.vcf.gz", 
+#         db="annotation/snpeff/GRCm38.101" 
+#     output:
+#         calls="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
+#         stats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
+#         csvstats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
+#     log:
+#         "logs/snpeff/annotate.log"
+#     params:
+#         extra="-Xmx4g"         
+#     wrapper:
+#         "0.67.0/bio/snpeff/annotate"
 
 
 
