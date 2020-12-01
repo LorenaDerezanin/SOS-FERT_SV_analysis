@@ -6,7 +6,7 @@
 # run in conda env snakemake 
 # snakemake v.5.28
 # check snakefile status with snakemake --lint -s Snakefile1
-# dry run: snakemake -np --use-conda --cores 75 --verbose -s Snakefile1
+# dry run: snakemake -np --use-conda --cores 80 --verbose -s Snakefile1
 
 ###################################################################################################################
 
@@ -37,7 +37,7 @@
 
 #### extract gap regions/low complexity regions in ref. genome
 
-# python generate_masked_ranges.py Mus_musculus.GRCm38.dna.primary_assembly.fa > Mus_musculus.GRCm38_output_ranges.bed
+# python scripts/generate_masked_ranges.py Mus_musculus.GRCm38.dna.primary_assembly.fa > Mus_musculus.GRCm38_output_ranges.bed
 
 
 ###################################################################################################################
@@ -51,7 +51,9 @@ rule all:
     input:
       expand("02_mice_lines_manta/{sample}_manta/runWorkflow.py", sample=config["samples"]),
       expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz", sample=config["samples"]),
-      expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"])
+      expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"]),
+      expand("03_mice_lines_whamg/01_results/{sample}_wham.vcf", sample=config["samples"]),
+      expand("03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"])
       # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.vcf",
       # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.html",  
       # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.csv",
@@ -63,12 +65,13 @@ rule all:
 
     
 
-
 ###################################################################################################################
 
 
 ### STRUCTURAL VARIANT CALLING ### 
 
+
+# smoove SV call and genotyping
 # rule smoove_sv_call:
 #     input:
 #       lambda wildcards: config["samples"][wildcards.sample]
@@ -89,6 +92,8 @@ rule all:
 
 # lumpy-filter removes alignments with low mapq, depth > 1000
 
+
+
 # prep manta config
 rule manta_config:
     input:
@@ -102,18 +107,16 @@ rule manta_config:
     conda:
         "envs/manta.yml"
     shell:
-        "configManta.py --bam {wildcards.sample} --referenceFasta {REF} --runDir {params.rundir}"
+        "configManta.py --bam {wildcards.sample} --referenceFasta {REF} --runDir {params.rundir} 2> {log}"
 
 
-
-
-# manta call
+# manta SV call
 rule manta_sv_call:
     input:
         "02_mice_lines_manta/{sample}_manta/runWorkflow.py"
     output:
-        "02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz",
-        "02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi"
+        calls="02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz",
+        index="02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi"
     log:
         "logs/manta/{sample}_sv_call.log"
     params:
@@ -123,6 +126,71 @@ rule manta_sv_call:
         "envs/manta.yml"
     shell:
         "python {input} -j {threads} -g {params.GB} 2> {log}"
+
+
+
+
+# whamg SV call
+rule whamg_sv_call:
+    input:
+        lambda wildcards: config["samples"][wildcards.sample]
+    output:
+        "03_mice_lines_whamg/01_results/{sample}_wham.vcf"
+    log:
+        "logs/whamg/{sample}_sv_call.log"
+    params:
+        chrom="HiC_scaffold_1,HiC_scaffold_2,HiC_scaffold_3,HiC_scaffold_4,HiC_scaffold_5,HiC_scaffold_6,HiC_scaffold_7,HiC_scaffold_8,\
+HiC_scaffold_9,HiC_scaffold_10,HiC_scaffold_11,HiC_scaffold_12,HiC_scaffold_13,HiC_scaffold_14,HiC_scaffold_15,\
+HiC_scaffold_16,HiC_scaffold_17,HiC_scaffold_18,HiC_scaffold_19,HiC_scaffold_20"
+    threads: 10
+    conda:
+        "envs/whamg.yml"
+    shell:
+        "whamg -f {input} -a {REF} -c {params.chrom} -x {threads} > {output} 2> {log}"
+
+
+
+###################################################################################################################
+
+### GENOTYPING CALLS ###
+
+rule svtyper_genotype_whamg_calls:
+    input:
+        vcf="03_mice_lines_whamg/01_results/{sample}_wham.vcf",
+        bams=lambda wildcards: config["samples"][wildcards.sample]
+    output:
+        "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
+    log:
+        "logs/whamg/{sample}_genotyped.log"
+    params:
+        outdir="03_mice_lines_whamg/02_genotyped",
+        num_reads=2000000
+    conda:
+        "envs/smoove.yml"
+    shell:
+        "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
+
+
+
+## Formatting and filtering ##
+
+
+
+# manta calls transform BND in INV
+
+# filter whamg calls
+
+# filter all calls for GQ, read support, 60% of samples containing the SV
+
+# survivor merge
+
+
+
+
+
+
+
+
 
 
 
