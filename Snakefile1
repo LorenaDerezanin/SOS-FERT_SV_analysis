@@ -1,17 +1,20 @@
 ### STRUCTURAL VARIATION ANALYSIS ###
 
+
 # author: Lorena Derezanin
 # date: 5/11/2020
 # run in conda env snakemake 
 # snakemake v.5.28
-# check snakefile status with snakemake --lint
-# snakemake -np --use-conda --cores 75 --verbose -s Snakefile1
+# check snakefile status with snakemake --lint -s Snakefile1
+# dry run: snakemake -np --use-conda --cores 75 --verbose -s Snakefile1
 
 ###################################################################################################################
 
 ## mice reads mapped to mice reference genome (Mus_musculus.GRCm38) with BWA
 # 150 samples in the cohort (6 lines/populations)
-# SV caller: smoove(Lumpy + svtools + CNVnator/CNVpythor)
+# SV caller: Smoove (Lumpy + svtools) - population call
+#            Manta - individual calls
+#            Whamg - individual calls
 
 ###################################################################################################################
 
@@ -46,10 +49,13 @@ REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.
 
 rule all:
     input:
-      "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.vcf",
-      "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.html",  
-      "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.csv",
-      "annotation/snpeff/GRCm38.86" 
+      expand("02_mice_lines_manta/{sample}_manta/runWorkflow.py", sample=config["samples"]),
+      expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz", sample=config["samples"]),
+      expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"])
+      # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.vcf",
+      # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.html",  
+      # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.csv",
+      # "annotation/snpeff/GRCm38.86" 
       # expand("01_mice_lines_smoove/genotyped/{sample}-smoove.merged.gt.vcf.gz", sample=config["samples"]),
       # "01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf.gz",
       # "01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.vcf",  
@@ -63,42 +69,64 @@ rule all:
 
 ### STRUCTURAL VARIANT CALLING ### 
 
-rule smoove_sv_call:
-    input:
-      lambda wildcards: config["samples"][wildcards.sample]
-    output:
-      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz",
-      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz.csi",
-      "01_mice_lines_smoove/01_results/{sample}-lumpy-cmd.sh"
-    log:
-      "logs/smoove/{sample}.sv_call.log"
-    params:
-      outdir="01_mice_lines_smoove/01_results",
-      bed="Mus_musculus.GRCm38_output_ranges.bed"
-    conda:
-      "envs/smoove.yml"
-    threads: 1
-    shell:
-      "smoove call --outdir {params.outdir} --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
+# rule smoove_sv_call:
+#     input:
+#       lambda wildcards: config["samples"][wildcards.sample]
+#     output:
+#       "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz",
+#       "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz.csi",
+#       "01_mice_lines_smoove/01_results/{sample}-lumpy-cmd.sh"
+#     log:
+#       "logs/smoove/{sample}.sv_call.log"
+#     params:
+#       outdir="01_mice_lines_smoove/01_results",
+#       bed="Mus_musculus.GRCm38_output_ranges.bed"
+#     conda:
+#       "envs/smoove.yml"
+#     threads: 1
+#     shell:
+#       "smoove call --outdir {params.outdir} --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
 
 # lumpy-filter removes alignments with low mapq, depth > 1000
 
-
+# prep manta config
 rule manta_config:
     input:
-        # f"" - formatted python3 string, substitutes variables with values
-        lambda wildcards: [f"no_unloc_scf/{wildcards.species}/{sample}_no_unloc.bam" for sample in SAMPLES[wildcards.species]]
+        lambda wildcards: config["samples"][wildcards.sample]
     output:
-        "sv_analysis/{species}_manta/runWorkflow.py",
+        "02_mice_lines_manta/{sample}_manta/runWorkflow.py"
     log:
-        "logs/manta/{species}_config.log"
+        "logs/manta/{sample}_config.log"
     params:
-        rundir="sv_analysis/{species}_manta",
-        ref="MusPutFur1.0_HiC.fasta"
+        rundir="02_mice_lines_manta/{sample}_manta"
     conda:
         "envs/manta.yml"
     shell:
-        "configManta.py --bam {input} --referenceFasta {params.ref} --runDir {params.rundir}"
+        "configManta.py --bam {wildcards.sample} --referenceFasta {REF} --runDir {params.rundir}"
+
+
+
+
+# manta call
+rule manta_sv_call:
+    input:
+        "02_mice_lines_manta/{sample}_manta/runWorkflow.py"
+    output:
+        "02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz",
+        "02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi"
+    log:
+        "logs/manta/{sample}_sv_call.log"
+    params:
+        GB=100
+    threads: 10
+    conda:
+        "envs/manta.yml"
+    shell:
+        "python {input} -j {threads} -g {params.GB} 2> {log}"
+
+
+
+
 
 
 # # get union of sites across samples 
@@ -119,21 +147,21 @@ rule manta_config:
 
 
 # genotype each sample at merged sites, run duphold to add depth annotation
-rule genotype_merged:
-    input:
-      merged="01_mice_lines_smoove/02_merged/merged.sites.vcf.gz",
-      bams=lambda wildcards: config["samples"][wildcards.sample]
-    output:
-      "01_mice_lines_smoove/03_genotyped/{sample}-joint-smoove.genotyped.vcf.gz"
-    log:
-      "logs/smoove/{sample}.merged.genotyped.log"
-    params:
-      outdir="01_mice_lines_smoove/03_genotyped"
-    conda:
-      "envs/smoove.yml"
-    threads: 1
-    shell:
-      "smoove genotype -d -x --outdir {params.outdir} --name {wildcards.sample}-joint --fasta {REF} -p {threads} --vcf {input.merged} {input.bams} 2> {log}"        
+# rule genotype_merged:
+#     input:
+#       merged="01_mice_lines_smoove/02_merged/merged.sites.vcf.gz",
+#       bams=lambda wildcards: config["samples"][wildcards.sample]
+#     output:
+#       "01_mice_lines_smoove/03_genotyped/{sample}-joint-smoove.genotyped.vcf.gz"
+#     log:
+#       "logs/smoove/{sample}.merged.genotyped.log"
+#     params:
+#       outdir="01_mice_lines_smoove/03_genotyped"
+#     conda:
+#       "envs/smoove.yml"
+#     threads: 1
+#     shell:
+#       "smoove genotype -d -x --outdir {params.outdir} --name {wildcards.sample}-joint --fasta {REF} -p {threads} --vcf {input.merged} {input.bams} 2> {log}"        
 
 
 
