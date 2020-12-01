@@ -49,11 +49,11 @@ REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.
 
 rule all:
     input:
-      expand("02_mice_lines_manta/{sample}_manta/runWorkflow.py", sample=config["samples"]),
-      expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz", sample=config["samples"]),
-      expand("02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"]),
-      expand("03_mice_lines_whamg/01_results/{sample}_wham.vcf", sample=config["samples"]),
-      expand("03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"])
+      # expand("02_mice_lines_manta/01_results/{sample}_manta/runWorkflow.py", sample=config["samples"]),
+      expand("02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz", sample=config["samples"]),
+      expand("02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"])
+      # expand("03_mice_lines_whamg/01_results/{sample}_wham.vcf", sample=config["samples"]),
+      # expand("03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"])
       # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.vcf",
       # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.html",  
       # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.csv",
@@ -80,7 +80,7 @@ rule all:
 #       "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz.csi",
 #       "01_mice_lines_smoove/01_results/{sample}-lumpy-cmd.sh"
 #     log:
-#       "logs/smoove/{sample}.sv_call.log"
+#       "logs/smoove/01_results/{sample}.sv_call.log"
 #     params:
 #       outdir="01_mice_lines_smoove/01_results",
 #       bed="Mus_musculus.GRCm38_output_ranges.bed"
@@ -95,30 +95,30 @@ rule all:
 
 
 # prep manta config
-rule manta_config:
-    input:
-        lambda wildcards: config["samples"][wildcards.sample]
-    output:
-        "02_mice_lines_manta/{sample}_manta/runWorkflow.py"
-    log:
-        "logs/manta/{sample}_config.log"
-    params:
-        rundir="02_mice_lines_manta/{sample}_manta"
-    conda:
-        "envs/manta.yml"
-    shell:
-        "configManta.py --bam {wildcards.sample} --referenceFasta {REF} --runDir {params.rundir} 2> {log}"
+# rule manta_config:
+#     input:
+#         lambda wildcards: config["samples"][wildcards.sample]
+#     output:
+#         "02_mice_lines_manta/01_results/{sample}_manta/runWorkflow.py"
+#     log:
+#         "logs/manta/01_results/{sample}_config.log"
+#     params:
+#         rundir="02_mice_lines_manta/01_results/{sample}_manta"
+#     conda:
+#         "envs/manta.yml"
+#     shell:
+#         "configManta.py --bam {wildcards.sample} --referenceFasta {REF} --runDir {params.rundir} 2> {log}"
 
 
 # manta SV call
 rule manta_sv_call:
     input:
-        "02_mice_lines_manta/{sample}_manta/runWorkflow.py"
+        "02_mice_lines_manta/01_results/{sample}_manta/runWorkflow.py"
     output:
-        calls="02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz",
-        index="02_mice_lines_manta/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi"
+        calls="02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz",
+        index="02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi"
     log:
-        "logs/manta/{sample}_sv_call.log"
+        "logs/manta/01_results/{sample}_sv_call.log"
     params:
         GB=100
     threads: 10
@@ -131,56 +131,96 @@ rule manta_sv_call:
 
 
 # whamg SV call
-rule whamg_sv_call:
-    input:
-        lambda wildcards: config["samples"][wildcards.sample]
-    output:
-        "03_mice_lines_whamg/01_results/{sample}_wham.vcf"
-    log:
-        "logs/whamg/{sample}_sv_call.log"
-    params:
-        chrom="HiC_scaffold_1,HiC_scaffold_2,HiC_scaffold_3,HiC_scaffold_4,HiC_scaffold_5,HiC_scaffold_6,HiC_scaffold_7,HiC_scaffold_8,\
-HiC_scaffold_9,HiC_scaffold_10,HiC_scaffold_11,HiC_scaffold_12,HiC_scaffold_13,HiC_scaffold_14,HiC_scaffold_15,\
-HiC_scaffold_16,HiC_scaffold_17,HiC_scaffold_18,HiC_scaffold_19,HiC_scaffold_20"
-    threads: 10
-    conda:
-        "envs/whamg.yml"
-    shell:
-        "whamg -f {input} -a {REF} -c {params.chrom} -x {threads} > {output} 2> {log}"
+# rule whamg_sv_call:
+#     input:
+#         lambda wildcards: config["samples"][wildcards.sample]
+#     output:
+#         "03_mice_lines_whamg/01_results/{sample}_wham.vcf"
+#     log:
+#         "logs/whamg/01_results/{sample}_sv_call.log"
+#     params:
+#         chrom="HiC_scaffold_1,HiC_scaffold_2,HiC_scaffold_3,HiC_scaffold_4,HiC_scaffold_5,HiC_scaffold_6,HiC_scaffold_7,HiC_scaffold_8,\
+# HiC_scaffold_9,HiC_scaffold_10,HiC_scaffold_11,HiC_scaffold_12,HiC_scaffold_13,HiC_scaffold_14,HiC_scaffold_15,\
+# HiC_scaffold_16,HiC_scaffold_17,HiC_scaffold_18,HiC_scaffold_19,HiC_scaffold_20"
+#     threads: 10
+#     conda:
+#         "envs/whamg.yml"
+#     shell:
+#         "whamg -f {input} -a {REF} -c {params.chrom} -x {threads} > {output} 2> {log}"
 
 
 
 ###################################################################################################################
 
+
 ### GENOTYPING CALLS ###
 
-rule svtyper_genotype_whamg_calls:
+# genotype whamg calls with svtyper:
+# rule svtyper_genotype_whamg_calls:
+#     input:
+#         vcf="03_mice_lines_whamg/01_results/{sample}_wham.vcf",
+#         bams=lambda wildcards: config["samples"][wildcards.sample]
+#     output:
+#         "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
+#     log:
+#         "logs/whamg/02_genotyped/{sample}_genotyped.log"
+#     params:
+#         outdir="03_mice_lines_whamg/02_genotyped",
+#         num_reads=2000000 # number of reads used for library insert size estimation
+#     conda:
+#         "envs/smoove.yml"
+#     shell:
+#         "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
+
+
+
+### FORMATTING AND FILTERING ###
+
+# convert reciprocal inversions (some of the BND to INV) in manta calls for correct SV counts
+rule convert_manta_INVs:
     input:
-        vcf="03_mice_lines_whamg/01_results/{sample}_wham.vcf",
-        bams=lambda wildcards: config["samples"][wildcards.sample]
+        "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz"
     output:
-        "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
+        "02_mice_lines_manta/02_converted/{sample}_inv.vcf"
     log:
-        "logs/whamg/{sample}_genotyped.log"
+        "logs/manta/02_converted/{sample}_inv_convert.log"
     params:
-        outdir="03_mice_lines_whamg/02_genotyped",
-        num_reads=2000000
-    conda:
-        "envs/smoove.yml"
+        pigz_cpus=4
     shell:
-        "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
+        "pigz -d -p {params.pigz_cpus} {input} | scripts/convertInversion.py scripts/samtools {REF} - > {output}"
+# running scripts originally from miniconda3/envs/manta/share/manta-1.6.0-0/libexec
 
+# $MANTA_LIBEXEC/convertInversion.py $MANTA_LIBEXEC/samtools \
+# $REF/MusPutFur1.0_HiC.fasta BFF_joint_call_diploidSV_chr_order.vcf > BFF_joint_call_diploidSV_chr_inv_fixed.vcf
 
-
-## Formatting and filtering ##
-
-
-
-# manta calls transform BND in INV
 
 # filter whamg calls
 
-# filter all calls for GQ, read support, 60% of samples containing the SV
+# script parameters: 
+  # size: filtered out calls <50bp and >2Mb
+  # filter out calls with less than 4 support. reads 
+  # max CW < 0.2 translocations
+
+rule filter_whamg:
+    input:
+        "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
+    output:
+        "03_mice_lines_whamg/03_filtered/{sample}_wham.filtered.vcf"
+    log:
+        "logs/whamg/03_filtered/{sample}_filtered.log"
+    shell:
+        "cat {input} | perl scripts/filtWhamG.pl > {output} "
+
+
+# keep chromosome calls only
+
+
+# remove unplaced scaffolds from header
+
+
+
+
+# filter all calls for GQ 20, read support, split per sample, merge per line, filter 60% of samples containing the SV
 
 # survivor merge
 
