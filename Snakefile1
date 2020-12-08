@@ -59,7 +59,8 @@ rule all:
         expand("02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf", sample=config["samples"]),
         expand("02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf", sample=config["samples"]),
         expand("02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf", sample=config["samples"]),
-        expand("03_mice_lines_whamg/03_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
+        expand("03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
+        expand("03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),
         expand("03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf", sample=config["samples"]),
         expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf", sample=config["samples"]),
         expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
@@ -153,31 +154,6 @@ rule whamg_sv_call:
 ###################################################################################################################
 
 
-### GENOTYPING CALLS ###
-
-# genotype whamg calls with svtyper
-rule svtyper_genotype_whamg_calls:
-    input:
-        vcf="03_mice_lines_whamg/01_results/{sample}_wham.vcf",
-        bams=lambda wildcards: config["samples"][wildcards.sample]
-    output:
-        "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
-    log:
-        "logs/whamg/02_genotyped/{sample}_genotyped.log"
-    params:
-        outdir="03_mice_lines_whamg/02_genotyped",
-        num_reads=2000000 # number of reads used for library insert size estimation
-    conda:
-        "envs/smoove.yml"
-    shell:
-        "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
-
-
-# svtyper ignores INS
-
-###################################################################################################################
-
-
 ### FORMATTING AND FILTERING ###
 
 # unzip manta calls
@@ -189,10 +165,9 @@ rule pigz_unzip_manta:
         "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf"
     log:
         "logs/manta/01_results/{sample}_unzip.log"
-    params:
-        pigz_cpus=4
+    threads: 2
     shell:
-        "pigz -d -p {params.pigz_cpus} {input} > {output} 2> {log}"
+        "pigz -d -p {threads} {input} > {output} 2> {log}"
 
 
 # convert reciprocal inversions (some of the BND to INV) in manta calls for correct SV counts
@@ -258,20 +233,8 @@ rule keep_PR_SR_manta:
 
 
 
-# merge per sample for at least 2 callers
-# merge per line
-# keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
 
-# for f in ./*.vcf
-# do
-#   base=$(basename $f "_filter_pass.vcf")
-#   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
-# done
-
-
-
-
-### filter whamg calls
+### filter whamg calls before genotyping (otherwise the GQ info is lost)
 
 # script parameters: 
   # size: filtered out calls <50bp and >2Mb
@@ -280,13 +243,41 @@ rule keep_PR_SR_manta:
 
 rule filter_whamg:
     input:
-        "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
+        "03_mice_lines_whamg/01_results/{sample}_wham.vcf"
     output:
-        "03_mice_lines_whamg/03_filtered/{sample}_wham_filtered.vcf"
+        "03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf"
     log:
-        "logs/whamg/03_filtered/{sample}_filtered.log"
+        "logs/whamg/02_filtered/{sample}_filtered.log"
     shell:
         "cat {input} | perl scripts/filtWhamG.pl > {output} 2> {log}"
+
+
+###################################################################################################################
+
+
+### GENOTYPING CALLS ###
+
+# genotype whamg calls with svtyper
+rule svtyper_genotype_whamg_calls:
+    input:
+        vcf="03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf",
+        bams=lambda wildcards: config["samples"][wildcards.sample]
+    output:
+        "03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf"
+    log:
+        "logs/whamg/03_genotyped/{sample}_genotyped.log"
+    params:
+        outdir="03_mice_lines_whamg/03_genotyped",
+        num_reads=2000000 # number of reads used for library insert size estimation
+    conda:
+        "envs/smoove.yml"
+    shell:
+        "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
+
+
+# svtyper ignores INS
+
+###################################################################################################################
 
 
 
@@ -294,7 +285,7 @@ rule filter_whamg:
 
 rule filter_GQ20_whamg:
     input:
-        "03_mice_lines_whamg/03_filtered/{sample}_wham_filtered.vcf"
+        "03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf"
     output:
         "03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf"
     log:
@@ -307,7 +298,7 @@ rule filter_GQ20_whamg:
 
 
 
-# keep calls with A=total pieces of evidence (total support, INFO field “A” in vcf)
+# keep calls with A=total pieces of evidence (total support, INFO field “A” in vcf), minimun A<5
 
 rule total_support_A_whamg:
     input:
@@ -325,21 +316,31 @@ rule total_support_A_whamg:
 
 ### filter smoove calls
 
+rule pigz_unzip_smoove:
+    input:
+        "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz"
+    output:
+        "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf"
+    log:
+        "logs/smoove/01_results/{sample}_unzip.log"
+    threads: 2
+    shell:
+        "pigz -d -p {threads} {input} > {output} 2> {log}"
+
+
 # filter out calls with genotype quality below 20
 
 rule filter_GQ20_smoove:
     input:
-      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz"
+      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf"
     output:
         "01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf"
     log:
         "logs/smoove/02_GQ20/{sample}_GQ20.log"
-    params:
-        pigz_cpus=4
     conda:
         "envs/bcftools.yml"
     shell:
-        "pigz -d -p {params.pigz_cpus} {input} | bcftools filter -e 'GQ<20' - > {output} 2> {log}"
+        "bcftools filter -e 'GQ<20' {input} > {output} 2> {log}"
 
 
 
@@ -358,14 +359,23 @@ rule read_support_SU_smoove:
         "bcftools filter -e 'FORMAT/SU<10' {input} > {output} 2> {log}"
 
 
+###################################################################################################################
 
 
-# merge per sample for at least 2 callers, 
+### SURVIVOR MERGE CALLS ###
 
-# merge per line, 
 
-# filter 60% of samples containing the SV
+# sort vcf files
 
+# merge per sample for at least 2 callers
+# merge per line
+# keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
+
+# for f in ./*.vcf
+# do
+#   base=$(basename $f "_filter_pass.vcf")
+#   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
+# done
 
 
 # keep chromosome calls only
