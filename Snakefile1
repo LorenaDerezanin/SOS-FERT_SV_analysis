@@ -50,18 +50,20 @@ REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.
 rule all:
     input:
       # expand("02_mice_lines_manta/01_results/{sample}_manta/runWorkflow.py", sample=config["samples"]),
-      expand("02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz", sample=config["samples"]),
-      expand("02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"])
+      # expand("02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz", sample=config["samples"]),
+      # expand("02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz.tbi", sample=config["samples"]),
       # expand("03_mice_lines_whamg/01_results/{sample}_wham.vcf", sample=config["samples"]),
-      # expand("03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"])
-      # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.vcf",
-      # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.html",  
-      # "01_mice_lines_smoove/05_annotated/mice_variants.snpeff.annotated.csv",
-      # "annotation/snpeff/GRCm38.86" 
+      # expand("03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),     
       # expand("01_mice_lines_smoove/genotyped/{sample}-smoove.merged.gt.vcf.gz", sample=config["samples"]),
-      # "01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf.gz",
-      # "01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.vcf",  
-      # "01_mice_lines_smoove/05_annotated/mice_variants.vep.annotated.html"
+        expand("02_mice_lines_manta/02_converted/{sample}_inv.vcf", sample=config["samples"]),
+        expand("02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf", sample=config["samples"]),
+        expand("02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf", sample=config["samples"]),
+        expand("02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf", sample=config["samples"]),
+        expand("03_mice_lines_whamg/03_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
+        expand("03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf", sample=config["samples"]),
+        expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf", sample=config["samples"]),
+        expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
+        expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf", sample=config["samples"])
 
     
 
@@ -72,42 +74,42 @@ rule all:
 
 
 # smoove SV call and genotyping
-# rule smoove_sv_call:
-#     input:
-#       lambda wildcards: config["samples"][wildcards.sample]
-#     output:
-#       "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz",
-#       "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz.csi",
-#       "01_mice_lines_smoove/01_results/{sample}-lumpy-cmd.sh"
-#     log:
-#       "logs/smoove/01_results/{sample}.sv_call.log"
-#     params:
-#       outdir="01_mice_lines_smoove/01_results",
-#       bed="Mus_musculus.GRCm38_output_ranges.bed"
-#     conda:
-#       "envs/smoove.yml"
-#     threads: 1
-#     shell:
-#       "smoove call --outdir {params.outdir} --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
+rule smoove_sv_call:
+    input:
+      lambda wildcards: config["samples"][wildcards.sample]
+    output:
+      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz",
+      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz.csi",
+      "01_mice_lines_smoove/01_results/{sample}-lumpy-cmd.sh"
+    log:
+      "logs/smoove/01_results/{sample}.sv_call.log"
+    params:
+      outdir="01_mice_lines_smoove/01_results",
+      bed="Mus_musculus.GRCm38_output_ranges.bed"
+    conda:
+      "envs/smoove.yml"
+    threads: 1
+    shell:
+      "smoove call --outdir {params.outdir} --exclude {params.bed} --name {wildcards.sample} --fasta {REF} -p {threads} --genotype {input} 2> {log}"
 
 # lumpy-filter removes alignments with low mapq, depth > 1000
 
 
 
 # prep manta config
-# rule manta_config:
-#     input:
-#         lambda wildcards: config["samples"][wildcards.sample]
-#     output:
-#         "02_mice_lines_manta/01_results/{sample}_manta/runWorkflow.py"
-#     log:
-#         "logs/manta/01_results/{sample}_config.log"
-#     params:
-#         rundir="02_mice_lines_manta/01_results/{sample}_manta"
-#     conda:
-#         "envs/manta.yml"
-#     shell:
-#         "configManta.py --bam {wildcards.sample} --referenceFasta {REF} --runDir {params.rundir} 2> {log}"
+rule manta_config:
+    input:
+        lambda wildcards: config["samples"][wildcards.sample]
+    output:
+        "02_mice_lines_manta/01_results/{sample}_manta/runWorkflow.py"
+    log:
+        "logs/manta/01_results/{sample}_config.log"
+    params:
+        rundir="02_mice_lines_manta/01_results/{sample}_manta"
+    conda:
+        "envs/manta.yml"
+    shell:
+        "configManta.py --bam {input} --referenceFasta {REF} --runDir {params.rundir} 2> {log}"
 
 
 # manta SV call
@@ -130,23 +132,21 @@ rule manta_sv_call:
 
 
 
-# whamg SV call
-# rule whamg_sv_call:
-#     input:
-#         lambda wildcards: config["samples"][wildcards.sample]
-#     output:
-#         "03_mice_lines_whamg/01_results/{sample}_wham.vcf"
-#     log:
-#         "logs/whamg/01_results/{sample}_sv_call.log"
-#     params:
-#         chrom="HiC_scaffold_1,HiC_scaffold_2,HiC_scaffold_3,HiC_scaffold_4,HiC_scaffold_5,HiC_scaffold_6,HiC_scaffold_7,HiC_scaffold_8,\
-# HiC_scaffold_9,HiC_scaffold_10,HiC_scaffold_11,HiC_scaffold_12,HiC_scaffold_13,HiC_scaffold_14,HiC_scaffold_15,\
-# HiC_scaffold_16,HiC_scaffold_17,HiC_scaffold_18,HiC_scaffold_19,HiC_scaffold_20"
-#     threads: 10
-#     conda:
-#         "envs/whamg.yml"
-#     shell:
-#         "whamg -f {input} -a {REF} -c {params.chrom} -x {threads} > {output} 2> {log}"
+# # whamg SV call
+rule whamg_sv_call:
+    input:
+        lambda wildcards: config["samples"][wildcards.sample]
+    output:
+        "03_mice_lines_whamg/01_results/{sample}_wham.vcf"
+    log:
+        "logs/whamg/01_results/{sample}_sv_call.log"
+    params:
+        chrom="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,X,Y,MT"
+    threads: 5
+    conda:
+        "envs/whamg.yml"
+    shell:
+        "whamg -f {input} -a {REF} -c {params.chrom} -x {threads} > {output} 2> {log}"
 
 
 
@@ -155,46 +155,123 @@ rule manta_sv_call:
 
 ### GENOTYPING CALLS ###
 
-# genotype whamg calls with svtyper:
-# rule svtyper_genotype_whamg_calls:
-#     input:
-#         vcf="03_mice_lines_whamg/01_results/{sample}_wham.vcf",
-#         bams=lambda wildcards: config["samples"][wildcards.sample]
-#     output:
-#         "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
-#     log:
-#         "logs/whamg/02_genotyped/{sample}_genotyped.log"
-#     params:
-#         outdir="03_mice_lines_whamg/02_genotyped",
-#         num_reads=2000000 # number of reads used for library insert size estimation
-#     conda:
-#         "envs/smoove.yml"
-#     shell:
-#         "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
+# genotype whamg calls with svtyper
+rule svtyper_genotype_whamg_calls:
+    input:
+        vcf="03_mice_lines_whamg/01_results/{sample}_wham.vcf",
+        bams=lambda wildcards: config["samples"][wildcards.sample]
+    output:
+        "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
+    log:
+        "logs/whamg/02_genotyped/{sample}_genotyped.log"
+    params:
+        outdir="03_mice_lines_whamg/02_genotyped",
+        num_reads=2000000 # number of reads used for library insert size estimation
+    conda:
+        "envs/smoove.yml"
+    shell:
+        "svtyper -i {input.vcf} -B {input.bams} -l {params.outdir}/{wildcards.sample}.bam.json -n {params.num_reads} --verbose > {output} 2> {log}"
 
+
+# svtyper ignores INS
+
+###################################################################################################################
 
 
 ### FORMATTING AND FILTERING ###
 
-# convert reciprocal inversions (some of the BND to INV) in manta calls for correct SV counts
-rule convert_manta_INVs:
+# unzip manta calls
+
+rule pigz_unzip_manta:
     input:
         "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz"
+    output:
+        "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf"
+    log:
+        "logs/manta/01_results/{sample}_unzip.log"
+    params:
+        pigz_cpus=4
+    shell:
+        "pigz -d -p {params.pigz_cpus} {input} > {output} 2> {log}"
+
+
+# convert reciprocal inversions (some of the BND to INV) in manta calls for correct SV counts
+rule convert_INVs_manta:
+    input:
+        "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf"
     output:
         "02_mice_lines_manta/02_converted/{sample}_inv.vcf"
     log:
         "logs/manta/02_converted/{sample}_inv_convert.log"
-    params:
-        pigz_cpus=4
     shell:
-        "pigz -d -p {params.pigz_cpus} {input} | scripts/convertInversion.py scripts/samtools {REF} - > {output}"
+        "scripts/convertInversion.py scripts/samtools {REF} {input} > {output} 2> {log}"
 # running scripts originally from miniconda3/envs/manta/share/manta-1.6.0-0/libexec
 
 # $MANTA_LIBEXEC/convertInversion.py $MANTA_LIBEXEC/samtools \
 # $REF/MusPutFur1.0_HiC.fasta BFF_joint_call_diploidSV_chr_order.vcf > BFF_joint_call_diploidSV_chr_inv_fixed.vcf
 
 
-# filter whamg calls
+
+
+# filter manta calls with FILTER=PASS (sample passed all the sample-level filters for this SV event)
+rule filter_PASS_manta:
+    input:
+        "02_mice_lines_manta/02_converted/{sample}_inv.vcf"
+    output:
+        "02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf"
+    log:
+        "logs/manta/03_filter_pass/{sample}_filt_pass.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools view -f PASS {input} > {output} 2> {log}"
+
+
+# filter out calls with genotype quality below 20
+
+rule filter_GQ20_manta:
+    input:
+        "02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf"
+    output:
+        "02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf"
+    log:
+        "logs/manta/04_GQ20/{sample}_GQ20.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools filter -e 'GQ<20' {input} > {output} 2> {log}"
+
+
+# include sites with read support >=5
+
+rule keep_PR_SR_manta:
+    input:
+        "02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf"
+    output:
+        "02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf"
+    log:
+        "logs/manta/05_read_support/{sample}_PR5_SR5.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools filter -i 'PR>=5 & SR>=5' {input} > {output} 2> {log}"
+
+
+
+# merge per sample for at least 2 callers
+# merge per line
+# keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
+
+# for f in ./*.vcf
+# do
+#   base=$(basename $f "_filter_pass.vcf")
+#   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
+# done
+
+
+
+
+### filter whamg calls
 
 # script parameters: 
   # size: filtered out calls <50bp and >2Mb
@@ -205,22 +282,104 @@ rule filter_whamg:
     input:
         "03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf"
     output:
-        "03_mice_lines_whamg/03_filtered/{sample}_wham.filtered.vcf"
+        "03_mice_lines_whamg/03_filtered/{sample}_wham_filtered.vcf"
     log:
         "logs/whamg/03_filtered/{sample}_filtered.log"
     shell:
-        "cat {input} | perl scripts/filtWhamG.pl > {output} "
+        "cat {input} | perl scripts/filtWhamG.pl > {output} 2> {log}"
+
+
+
+# filter out calls with genotype quality below 20
+
+rule filter_GQ20_whamg:
+    input:
+        "03_mice_lines_whamg/03_filtered/{sample}_wham_filtered.vcf"
+    output:
+        "03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf"
+    log:
+        "logs/whamg/04_GQ20/{sample}_GQ20.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools filter -e 'GQ<20' {input} > {output} 2> {log}"
+
+
+
+
+# keep calls with A=total pieces of evidence (total support, INFO field “A” in vcf)
+
+rule total_support_A_whamg:
+    input:
+        "03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf"
+    output:
+        "03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf"
+    log:
+        "logs/whamg/05_total_support/{sample}_A10.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools filter -e 'INFO/A<10' {input} > {output} 2> {log}"
+
+
+
+### filter smoove calls
+
+# filter out calls with genotype quality below 20
+
+rule filter_GQ20_smoove:
+    input:
+      "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz"
+    output:
+        "01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf"
+    log:
+        "logs/smoove/02_GQ20/{sample}_GQ20.log"
+    params:
+        pigz_cpus=4
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "pigz -d -p {params.pigz_cpus} {input} | bcftools filter -e 'GQ<20' - > {output} 2> {log}"
+
+
+
+# filter read support SU<10
+
+rule read_support_SU_smoove:
+    input:
+        "01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf"
+    output:
+        "01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf"
+    log:
+        "logs/smoove/03_read_support/{sample}_SU10.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools filter -e 'FORMAT/SU<10' {input} > {output} 2> {log}"
+
+
+
+
+# merge per sample for at least 2 callers, 
+
+# merge per line, 
+
+# filter 60% of samples containing the SV
+
 
 
 # keep chromosome calls only
-
-
-# remove unplaced scaffolds from header
-
+ 
 
 
 
-# filter all calls for GQ 20, read support, split per sample, merge per line, filter 60% of samples containing the SV
+# remove unlocalized scfs from header
+
+# for f in $VEP_PREP_DIR/01_unlocalized_scf_removed/*.vcf
+# do
+#   base=$(basename $f ".vcf")
+#   grep -Ev '^(##contig=<ID=JH|##contig=<ID=GL|##contig=<ID=MT)' $f > $VEP_PREP_DIR/01_unlocalized_scf_removed/${base}_h.vcf
+# done
 
 # survivor merge
 
