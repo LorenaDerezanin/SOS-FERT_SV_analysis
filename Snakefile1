@@ -66,6 +66,7 @@ rule all:
         expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
         expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf", sample=config["samples"])
 
+
     
 
 ###################################################################################################################
@@ -166,7 +167,7 @@ rule unzip_manta:
     log:
         "logs/manta/01_results/{sample}_unzip.log"
     shell:
-        "gunzip -f {input} > {output} 2> {log}"
+        "gunzip {input} 2> {log}"
 
 
 # convert reciprocal inversions (some of the BND to INV) in manta calls for correct SV counts
@@ -323,7 +324,7 @@ rule unzip_smoove:
     log:
         "logs/smoove/01_results/{sample}_unzip.log"
     shell:
-        "gunzip -f {input} > {output} 2> {log}"
+        "gunzip {input} 2> {log}"
 
 
 # filter out calls with genotype quality below 20
