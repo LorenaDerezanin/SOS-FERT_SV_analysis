@@ -158,16 +158,15 @@ rule whamg_sv_call:
 
 # unzip manta calls
 
-rule pigz_unzip_manta:
+rule unzip_manta:
     input:
         "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf.gz"
     output:
         "02_mice_lines_manta/01_results/{sample}_manta/results/variants/diploidSV.vcf"
     log:
         "logs/manta/01_results/{sample}_unzip.log"
-    threads: 2
     shell:
-        "pigz -d -p {threads} {input} > {output} 2> {log}"
+        "gunzip -f {input} > {output} 2> {log}"
 
 
 # convert reciprocal inversions (some of the BND to INV) in manta calls for correct SV counts
@@ -316,16 +315,15 @@ rule total_support_A_whamg:
 
 ### filter smoove calls
 
-rule pigz_unzip_smoove:
+rule unzip_smoove:
     input:
         "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf.gz"
     output:
         "01_mice_lines_smoove/01_results/{sample}-smoove.genotyped.vcf"
     log:
         "logs/smoove/01_results/{sample}_unzip.log"
-    threads: 2
     shell:
-        "pigz -d -p {threads} {input} > {output} 2> {log}"
+        "gunzip -f {input} > {output} 2> {log}"
 
 
 # filter out calls with genotype quality below 20
