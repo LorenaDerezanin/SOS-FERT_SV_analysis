@@ -55,15 +55,15 @@ rule all:
       # expand("03_mice_lines_whamg/01_results/{sample}_wham.vcf", sample=config["samples"]),
       # expand("03_mice_lines_whamg/02_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),     
       # expand("01_mice_lines_smoove/genotyped/{sample}-smoove.merged.gt.vcf.gz", sample=config["samples"]),
-        expand("02_mice_lines_manta/02_converted/{sample}_inv.vcf", sample=config["samples"]),
-        expand("02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf", sample=config["samples"]),
-        expand("02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf", sample=config["samples"]),
-        expand("02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf", sample=config["samples"]),
-        expand("03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
-        expand("03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),
-        expand("03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf", sample=config["samples"]),
-        expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf", sample=config["samples"]),
-        expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
+        # expand("02_mice_lines_manta/02_converted/{sample}_inv.vcf", sample=config["samples"]),
+        # expand("02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf", sample=config["samples"]),
+        # expand("02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf", sample=config["samples"]),
+        # expand("02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf", sample=config["samples"]),
+        # expand("03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
+        # expand("03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),
+        # expand("03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf", sample=config["samples"]),
+        # expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf", sample=config["samples"]),
+        # expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
         expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf", sample=config["samples"])
 
 
@@ -355,7 +355,7 @@ rule read_support_SU_smoove:
     conda:
         "envs/bcftools.yml"
     shell:
-        "bcftools filter -e 'FORMAT/SU<10' {input} > {output} 2> {log}"
+        "bcftools filter -e 'INFO/SU<10' {input} > {output} 2> {log}"
 
 
 ###################################################################################################################
