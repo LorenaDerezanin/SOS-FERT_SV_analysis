@@ -5,12 +5,12 @@
 # date: 5/11/2020
 # run in conda env snakemake 
 # snakemake v.5.28
-# check snakefile status with snakemake --lint -s Snakefile1
+# check snakefile status with: snakemake --lint -s Snakefile1
 # dry run: snakemake -np --use-conda --cores 80 --verbose -s Snakefile1
 
 ###################################################################################################################
 
-## mice reads mapped to mice reference genome (Mus_musculus.GRCm38) with BWA
+## mice reads mapped to mice reference genome (Mus_musculus.GRCm38) with BWA v.?
 # 150 samples in the cohort (6 lines/populations)
 # SV caller: Smoove (Lumpy + svtools) - population call
 #            Manta - individual calls
@@ -361,26 +361,46 @@ rule read_support_SU_smoove:
 ###################################################################################################################
 
 
-### SURVIVOR MERGE CALLS ###
+### MERGE CALLS PER SAMPLE and PER LINE ###
+
+# move all sample vcf files in one dir
+
+# smoove
+# cp 01_mice_lines_smoove/03_read_support/* 04_calls_merged_per_sample/01_all_samples/
+# manta
+# cp 02_mice_lines_manta/05_read_support/* 04_calls_merged_per_sample/01_all_samples/
+# whamg
+# cp 03_mice_lines_whamg/05_total_support/* 04_calls_merged_per_sample/01_all_samples/
 
 
 # sort vcf files
 
+EXTENSIONS=["smoove_SU10.vcf", "wham_A10.vcf", "PR5_SR5.vcf"]
+
+rule sort_vcf:
+    input:                      # multiple file extensions per sample ID (filtered outputs of different callers)
+        expand("04_calls_merged_per_sample/01_all_samples/{sample}_{ext}", ext=EXTENSIONS)
+    output:
+         "04_calls_merged_per_sample/02_sorted/{sample}_srt.vcf"
+
+    log:
+    conda:
+    shell:
+
+
+  multiext("some/plot", ".pdf", ".svg", ".png")
+
+
+
+
+
+# survivor merge:
+
 # merge per sample for at least 2 callers
-# merge per line
-# keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
-
-# for f in ./*.vcf
-# do
-#   base=$(basename $f "_filter_pass.vcf")
-#   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
-# done
 
 
-# keep chromosome calls only
- 
 
-
+# remove unlocalized/unplaced scaffolds
 
 # remove unlocalized scfs from header
 
@@ -390,7 +410,21 @@ rule read_support_SU_smoove:
 #   grep -Ev '^(##contig=<ID=JH|##contig=<ID=GL|##contig=<ID=MT)' $f > $VEP_PREP_DIR/01_unlocalized_scf_removed/${base}_h.vcf
 # done
 
-# survivor merge
+
+
+
+# merge per line
+# keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
+
+# for f in ./*.vcf
+# do
+#   base=$(basename $f "_filter_pass.vcf")
+#   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
+# done 
+
+
+
+# annotation
 
 
 
@@ -402,7 +436,10 @@ rule read_support_SU_smoove:
 
 
 
+###################################################################################################################
 
+
+### OLD SMOOVE SV RUN ### 
 
 
 # # get union of sites across samples 
