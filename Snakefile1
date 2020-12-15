@@ -72,7 +72,9 @@ rule all:
         # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
-        expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES)
+        # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES),
+        expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES)
+
 
 
 
@@ -451,11 +453,12 @@ rule survivor_sample_stats:
 
 # split samples per mice line
 
+# prepare list of samples for each line
 
-# merge samples per line, SV start/end within 1000kb
+# merge samples per line, SV start/end within 1000 bp
 rule merge_per_mice_line:
     input:
-        expand("05_calls_merged_per_line/{mice_line}/{sample}_merged.vcf", sample=config["samples"], mice_line="{mice_line}")
+        expand("05_calls_merged_per_line/{mice_line}/{mice_line}.list", mice_line="{mice_line}")
     output:
         "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf"
     log:
@@ -466,6 +469,25 @@ rule merge_per_mice_line:
         "envs/survivor.yml"
     shell:
         "SURVIVOR merge {input} {params} {output} 2> {log}"
+
+
+# mice line stats
+rule mice_lines_stats:
+    input:
+        "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf"
+    output:
+        "05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats"
+    log:
+        "logs/merging/{mice_line}_stats.log"
+    params:
+        "50 -1 -1"
+    conda:
+        "envs/survivor.yml"
+    shell:
+        "SURVIVOR stats {input} {params} {output} 2> {log}"
+
+
+# 
 
 
 # keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
@@ -495,6 +517,7 @@ rule merge_per_mice_line:
 
 
 # annotation
+
 
 
 
