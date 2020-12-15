@@ -520,19 +520,14 @@ rule min_15_samples_per_line:
 
 
 
-
-# for f in ./*.vcf
-# do
-#   base=$(basename $f "_filter_pass.vcf")
-#   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
-# done 
-
-
-
-
-
-# remove unlocalized/unplaced scaffolds
-
+# run stats
+rule min_15_samples_stats:
+    input:
+    output:
+    log:
+    conda:
+    shell:
+    
 
 
 
