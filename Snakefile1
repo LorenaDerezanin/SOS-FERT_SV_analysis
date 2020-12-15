@@ -73,7 +73,10 @@ rule all:
         # expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES),
-        expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES)
+        # expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES),
+        expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
+        expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES)
+
 
 
 
@@ -487,10 +490,36 @@ rule mice_lines_stats:
         "SURVIVOR stats {input} {params} {output} 2> {log}"
 
 
-# 
+
+# Survivor writes SUPP as character instead of integer, change type in header
+rule change_SUPP_type:
+    input:
+        "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf"
+    output:
+        "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf"
+    log:
+        "logs/merging/{mice_line}_int.log"
+    shell:
+        "sed -e 's/INFO=<ID=SUPP,Number=1,Type=String/INFO=<ID=SUPP,Number=1,Type=Integer/g' {input} > {output} 2> {log}"
 
 
-# keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
+
+
+# keep SV calls for which at least 60% (15) of samples passed filter and merging steps
+rule min_15_samples_per_line:
+    input:
+        "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf"
+    output:
+        "05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf"
+    log:
+        "logs/merging/{mice_line}_filt.log"
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        "bcftools filter -i 'INFO/SUPP>=15' {input} > {output} 2> {log}"
+
+
+
 
 # for f in ./*.vcf
 # do
