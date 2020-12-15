@@ -46,7 +46,8 @@ configfile: "config.yaml"
 
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
 # GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
-EXTENSIONS=["PR5_SR5.vcf", "smoove_SU10.vcf", "wham_A10.vcf"] # "PR5_SR5.vcf" "smoove_SU10.vcf", "wham_A10.vcf"
+EXTENSIONS=["PR5_SR5.vcf", "smoove_SU10.vcf", "wham_A10.vcf"] 
+MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU"]
 
 
 rule all:
@@ -69,15 +70,11 @@ rule all:
         # expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample=config["samples"], ext=EXTENSIONS),
         # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
-        expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
-        expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"])
+        # expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
+        # expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
+        expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES)
 
 
-
-
-
-
-    
 
 ###################################################################################################################
 
@@ -452,11 +449,23 @@ rule survivor_sample_stats:
     shell:
         "SURVIVOR stats {input} {params} {output} 2> {log}"
 
-
 # split samples per mice line
 
-# merge samples per line
 
+# merge samples per line, SV start/end within 1000kb
+rule merge_per_mice_line:
+    input:
+        expand("05_calls_merged_per_line/{mice_line}/{sample}_merged.vcf", sample=config["samples"], mice_line="{mice_line}")
+    output:
+        "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf"
+    log:
+        "logs/merging_per_line/{mice_line}.log"
+    params:
+        "1000 0 1 0 0 50"
+    conda:
+        "envs/survivor.yml"
+    shell:
+        "SURVIVOR merge {input} {params} {output} 2> {log}"
 
 
 # keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
