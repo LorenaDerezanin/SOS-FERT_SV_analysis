@@ -46,7 +46,7 @@ configfile: "config.yaml"
 
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
 # GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
-EXTENSIONS=["smoove_SU10.vcf", "wham_A10.vcf", "PR5_SR5.vcf"]
+EXTENSIONS=["PR5_SR5.vcf", "smoove_SU10.vcf", "wham_A10.vcf"] # "PR5_SR5.vcf" "smoove_SU10.vcf", "wham_A10.vcf"
 
 
 rule all:
@@ -67,8 +67,13 @@ rule all:
         # expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf", sample=config["samples"]),
         # expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
         # expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf", sample=config["samples"]),
-        expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample=config["samples"], ext=EXTENSIONS)
-        # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"])
+        # expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample=config["samples"], ext=EXTENSIONS),
+        # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
+        expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
+        expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"])
+
+
+
 
 
 
@@ -379,22 +384,22 @@ rule read_support_SU_smoove:
 
 # sort vcf files
 
-rule sort_vcf:
-    input:        # multiple file extensions per sample ID (filtered outputs of different callers)
-        expand("04_calls_merged_per_sample/01_all_samples/{sample}_{ext}", sample="{sample}", ext=EXTENSIONS)
-    output:
-        expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample="{sample}", ext=EXTENSIONS)
-    log:
-        expand("logs/merging/{sample}_srt_{ext}.log", sample="{sample}", ext=EXTENSIONS)
-    conda:
-        "envs/bcftools.yml"
-    shell:
-        """
-        bcftools sort -Ov {input[0]} -o {output[0]} 2> {log[0]}
-        bcftools sort -Ov {input[1]} -o {output[1]} 2> {log[1]}
-        bcftools sort -Ov {input[2]} -o {output[2]} 2> {log[2]}
-        """
-
+# rule sort_vcf:
+#     input:        # multiple file extensions per sample ID (filtered outputs of different callers)
+#         expand("04_calls_merged_per_sample/01_all_samples/{sample}_{ext}", sample="{sample}", ext=EXTENSIONS)
+#     output:
+#         expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample="{sample}", ext=EXTENSIONS)
+#     log:
+#         expand("logs/merging/{sample}_srt_{ext}.log", sample="{sample}", ext=EXTENSIONS)
+#     conda:
+#         "envs/bcftools.yml"
+#     shell:
+#         """
+#         bcftools sort -Ov {input[0]} -o {output[0]} 2> {log[0]}
+#         bcftools sort -Ov {input[1]} -o {output[1]} 2> {log[1]}
+#         bcftools sort -Ov {input[2]} -o {output[2]} 2> {log[2]}
+#         """
+        
 
 
 ## SURVIVOR MERGE PER SAMPLE ##
@@ -414,34 +419,46 @@ rule list_sample_sv_call_sets:
 
 
 
-# # merge SVs with start/end within 500 bp, called by at least 2 callers, same SV type, min.size 50 bp
-# SURVIVOR merge bff_ref.list 500 2 1 0 0 50 bff_ref_lumpy_manta_wham.vcf
+# merge SVs with start/end within 500 bp, called by at least 2 callers, same SV type, min.size 50 bp
 
-# # run stats per sample
-# SURVIVOR stats bff_ref_lumpy_manta_wham.vcf 50 -1 -1 bff_ref_lumpy_manta_wham.stats
-
-
-
-
-
-
-
-
-
-# remove unlocalized/unplaced scaffolds
-
-# remove unlocalized scfs from header
-
-# for f in $VEP_PREP_DIR/01_unlocalized_scf_removed/*.vcf
-# do
-#   base=$(basename $f ".vcf")
-#   grep -Ev '^(##contig=<ID=JH|##contig=<ID=GL|##contig=<ID=MT)' $f > $VEP_PREP_DIR/01_unlocalized_scf_removed/${base}_h.vcf
-# done
+rule survivor_merge:
+    input:
+        "04_calls_merged_per_sample/03_call_sets_list/{sample}.list"
+    output:
+        "04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf"
+    log:
+        "logs/merging/{sample}_surv.log"
+    params:
+        "500 2 1 0 0 50"
+    conda:
+        "envs/survivor.yml"
+    shell:
+        "SURVIVOR merge {input} {params} {output} 2> {log}"
 
 
 
+# run stats per sample
+rule survivor_sample_stats:
+    input:
+        "04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf"
+    output:
+        "04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats"
+    log:
+        "logs/merging/{sample}_stats.log"
+    params:
+        "50 -1 -1"
+    conda:
+        "envs/survivor.yml"
+    shell:
+        "SURVIVOR stats {input} {params} {output} 2> {log}"
 
-# merge per line
+
+# split samples per mice line
+
+# merge samples per line
+
+
+
 # keep sites where 60% of samples (15) pass all sample-level filters, have FORMAT=PASS 
 
 # for f in ./*.vcf
@@ -450,6 +467,22 @@ rule list_sample_sv_call_sets:
 #   grep -P "^#|(:PASS:.*){15,}" $f > ${base}_FT_pass.vcf
 # done 
 
+
+
+
+
+# remove unlocalized/unplaced scaffolds
+
+
+
+
+# remove unlocalized scfs from header
+
+# for f in $VEP_PREP_DIR/01_unlocalized_scf_removed/*.vcf
+# do
+#   base=$(basename $f ".vcf")
+#   grep -Ev '^(##contig=<ID=JH|##contig=<ID=GL|##contig=<ID=MT)' $f > $VEP_PREP_DIR/01_unlocalized_scf_removed/${base}_h.vcf
+# done
 
 
 # annotation
