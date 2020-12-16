@@ -74,8 +74,9 @@ rule all:
         # expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES),
-        expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
-        expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES)
+        # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
+        # expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES),
+        expand("05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats", mice_line=MICE_LINES)
 
 
 
@@ -523,11 +524,44 @@ rule min_15_samples_per_line:
 # run stats
 rule min_15_samples_stats:
     input:
+        "05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf"
+    output:
+        "05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats"
+    log:
+      "logs/merging/{mice_line}_filt_stats.log"
+    params:
+      "50 -1 -1"
+    conda:
+     "envs/survivor.yml"
+    shell:
+        "SURVIVOR stats {input} {params} {output} 2> {log}"
+  
+    
+# merge lines to check for unique/shared SVs among all lines
+
+rule merge_mice_lines:
+    input:
+      "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf"
+    output:
+      "06_all_mice_lines_merged/{mice_line}_all.vcf"
+    log:
+    params:
+    conda:
+    shell:
+
+
+
+
+
+# prep matrix for UpSetplot
+
+rule upSetplot_prep:
+    input:
     output:
     log:
     conda:
     shell:
-    
+
 
 
 
