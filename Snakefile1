@@ -539,6 +539,8 @@ rule min_15_samples_stats:
     
 # merge lines to check for unique/shared SVs among all lines
 
+# prep list of merged mice line vcf files
+
 rule merge_mice_lines:
     input:
       "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf"
