@@ -5,14 +5,16 @@
 
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
 
-MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU"]
+MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU", "FERT"]
 
 
 rule all:
     input:
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES)
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES),
-      "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf"
+      # "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf",
+      expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.stats", mice_line=MICE_LINES)
+
 
 
 
@@ -95,6 +97,45 @@ rule vep_annotate_all_mice_lines:
 
 
 
+# subset unique SV call sets per line
+
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=100000" > DU6_unique_SVs.vcf
+
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=010000" > DU6P_unique_SVs.vcf
+
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=001000" > DUC_unique_SVs.vcf
+
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=000100" > DUhLB_unique_SVs.vcf
+
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=000010" > DUK_unique_SVs.vcf
+
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=000001" > FZTDU_unique_SVs.vcf
+
+# subset shared SVs in fertility lines DUK and DUC
+# grep -v "^##" mice_lines_all.vep.annotated.vcf | grep -P "^#|SUPP_VEC=001010" > FERT_unique_SVs.vcf
+
+
+# run stats on each unique SV call set 
+
+rule unique_SVs_per_line_stats:
+  input:
+    expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.vcf", mice_line="{mice_line}")
+  output:
+    "06_all_mice_lines_merged/{mice_line}_unique_SVs.stats"
+  log:
+    "logs/vep/{mice_line}_uniqueSVs.log"
+  params:
+    "50 -1 -1"
+  conda:
+    "envs/survivor.yml"
+  shell:
+    "SURVIVOR stats {input} {params} {output} 2> {log}"
+
+
+
+
+
+
 
 
   # vep \
@@ -151,7 +192,6 @@ rule snpeff_annotate:
         extra="-Xmx4g"         
     wrapper:
         "0.67.0/bio/snpeff/annotate"
-
 
 
 
