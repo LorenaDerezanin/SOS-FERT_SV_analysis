@@ -6,14 +6,16 @@
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
 
 MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU", "FERT"]
-
+SV_TYPE=["DEL", "DUP", "INV", "INS", "TRA"]
 
 rule all:
     input:
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES)
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES),
       # "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf",
-      expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.stats", mice_line=MICE_LINES)
+      # expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.stats", mice_line=MICE_LINES),
+      expand("06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE)
+
 
 
 
@@ -132,7 +134,25 @@ rule unique_SVs_per_line_stats:
     "SURVIVOR stats {input} {params} {output} 2> {log}"
 
 
+rule grep_SV_types_from_each_line:
+  input:
+    expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.vcf", mice_line="{mice_line}")
+  output:
+    "06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf"
+  log:
+    "log/unique_svs/{mice_line}_unique{sv_type}.log"
+  params:
+    sv_type="{sv_type}"
+  shell:
+    "grep -v '^#' {input} | grep 'SVTYPE={params.sv_type}' > {output} 2> {log}"
 
+
+
+# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=DEL" > all_species_DEL.vcf
+# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=DUP" > all_species_DUP.vcf
+# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=INV" > all_species_INV.vcf
+# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=INS" > all_species_INS.vcf
+# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=TRA" > all_species_TRA.vcf
 
 
 
