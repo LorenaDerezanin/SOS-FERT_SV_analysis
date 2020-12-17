@@ -78,10 +78,9 @@ rule all:
         # expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats", mice_line=MICE_LINES),
         # "06_all_mice_lines_merged/mice_lines_all.vcf",
-        "06_all_mice_lines_merged/mice_lines_all_overlap.txt"
+        "06_all_mice_lines_merged/mice_lines_all.stats"
 
-
-
+    
 
 
 
@@ -559,20 +558,26 @@ rule merge_mice_lines:
         "SURVIVOR merge {input} {params} {output} 2> {log}"
 
 
-
-
-# prep matrix for UpSetplot
-
-rule upSetplot_prep:
+rule all_mice_lines_stats:
     input:
         "06_all_mice_lines_merged/mice_lines_all.vcf"
     output:
-        "06_all_mice_lines_merged/mice_lines_all_overlap.txt"
+        "06_all_mice_lines_merged/mice_lines_all.stats"
     log:
-        "logs/final_vcf/mice_lines_all_upsetplot.log"
+        "logs/merging/mice_lines_all_stats.log"
+    params:
+        "50 -1 -1"
+    conda:
+        "envs/survivor.yml"
     shell:
-        "perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/' {input} | sed -e 's/\(.\)/\1 /g' > {output} 2> {log}"
+        "SURVIVOR stats {input} {params} {output} 2> {log}"
 
+
+
+
+
+# prep matrix for UpSetplot
+# perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/' mice_lines_all.vep.annotated.vcf | sed -e 's/\(.\)/\1 /g' > mice_lines_all.vep.annotated.vcf.overlap.txt
 
 
 # remove unlocalized scfs from header
