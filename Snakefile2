@@ -10,8 +10,9 @@ MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU"]
 
 rule all:
     input:
-      expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES)
-      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES)
+      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES)
+      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES),
+      "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf"
 
 
 
@@ -70,6 +71,30 @@ rule vep_annotate_conda:
 
 # --dir_plugins {input.plugins} 
 # {params.plugin}
+
+
+rule vep_annotate_all_mice_lines:
+    input:
+      calls="06_all_mice_lines_merged/mice_lines_all.vcf",
+      cache="annotation/vep/cache",
+      # plugins="annotation/vep/plugins",
+      fasta="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
+    output:
+      annotated="06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf"
+      # stats="05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html"
+    params:
+      # plugin=["GO"],
+      extra="--coding_only --per_gene --gene_phenotype --symbol --protein --sift b --overlaps --max_sv_size 200000000 --force_overwrite" 
+    log:
+      "logs/vep/mice_lines_all.vep.anno.log"
+    threads: 4
+    conda:
+      "envs/vep101.yml"
+    shell:
+      "vep -i {input.calls} --species mus_musculus --cache --dir_cache {input.cache} --fasta {input.fasta} {params.extra} --o {output.annotated} --stats_text --fork 4 --vcf --format vcf 2> {log}"
+
+
+
 
 
   # vep \

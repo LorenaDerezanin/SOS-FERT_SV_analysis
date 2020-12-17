@@ -76,7 +76,10 @@ rule all:
         # expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES),
-        expand("05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats", mice_line=MICE_LINES)
+        # expand("05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats", mice_line=MICE_LINES),
+        # "06_all_mice_lines_merged/mice_lines_all.vcf",
+        "06_all_mice_lines_merged/mice_lines_all_overlap.txt"
+
 
 
 
@@ -528,11 +531,11 @@ rule min_15_samples_stats:
     output:
         "05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats"
     log:
-      "logs/merging/{mice_line}_filt_stats.log"
+        "logs/merging/{mice_line}_filt_stats.log"
     params:
-      "50 -1 -1"
+        "50 -1 -1"
     conda:
-     "envs/survivor.yml"
+        "envs/survivor.yml"
     shell:
         "SURVIVOR stats {input} {params} {output} 2> {log}"
   
@@ -543,14 +546,17 @@ rule min_15_samples_stats:
 
 rule merge_mice_lines:
     input:
-      "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf"
+        "05_calls_merged_per_line/03_merged_lines_filtered/mice_lines_all.list"
     output:
-      "06_all_mice_lines_merged/{mice_line}_all.vcf"
+        "06_all_mice_lines_merged/mice_lines_all.vcf"
     log:
+        "logs/final_vcf/mice_lines_all.log"
     params:
+        "1000 0 1 0 0 50"
     conda:
+        "envs/survivor.yml"
     shell:
-
+        "SURVIVOR merge {input} {params} {output} 2> {log}"
 
 
 
@@ -559,11 +565,13 @@ rule merge_mice_lines:
 
 rule upSetplot_prep:
     input:
+        "06_all_mice_lines_merged/mice_lines_all.vcf"
     output:
+        "06_all_mice_lines_merged/mice_lines_all_overlap.txt"
     log:
-    conda:
+        "logs/final_vcf/mice_lines_all_upsetplot.log"
     shell:
-
+        "perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/' {input} | sed -e 's/\(.\)/\1 /g' > {output} 2> {log}"
 
 
 
