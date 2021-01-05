@@ -244,7 +244,7 @@ rule keep_PR_SR_manta:
     conda:
         "envs/bcftools.yml"
     shell:
-        "bcftools filter -i 'PR>=5 & SR>=5' {input} > {output} 2> {log}"
+        "bcftools filter -i 'PR>=3 & SR>=3' {input} > {output} 2> {log}"
 
 
 
@@ -325,7 +325,7 @@ rule total_support_A_whamg:
     conda:
         "envs/bcftools.yml"
     shell:
-        "bcftools filter -e 'INFO/A<10' {input} > {output} 2> {log}"
+        "bcftools filter -e 'INFO/A<5' {input} > {output} 2> {log}"
 
 
 
@@ -370,7 +370,7 @@ rule read_support_SU_smoove:
     conda:
         "envs/bcftools.yml"
     shell:
-        "bcftools filter -e 'INFO/SU<10' {input} > {output} 2> {log}"
+        "bcftools filter -e 'INFO/SU<5' {input} > {output} 2> {log}"
 
 
 ###################################################################################################################
