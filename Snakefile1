@@ -46,7 +46,7 @@ configfile: "config.yaml"
 
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
 # GFF="../../structural_variant_annotations/Mus_musculus.GRCm38.101.chr.gff3.gz"
-EXTENSIONS=["PR5_SR5.vcf", "smoove_SU10.vcf", "wham_A10.vcf"] 
+EXTENSIONS=["PR3_SR3.vcf", "smoove_SU5.vcf", "wham_A5.vcf"] 
 MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU"]
 
 
@@ -61,17 +61,17 @@ rule all:
         # expand("02_mice_lines_manta/02_converted/{sample}_inv.vcf", sample=config["samples"]),
         # expand("02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf", sample=config["samples"]),
         # expand("02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf", sample=config["samples"]),
-        expand("02_mice_lines_manta/05_read_support/{sample}_PR3_SR3.vcf", sample=config["samples"]),
+        # expand("02_mice_lines_manta/05_read_support/{sample}_PR3_SR3.vcf", sample=config["samples"]),
         # expand("03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
         # expand("03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),
         # expand("03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf", sample=config["samples"]),
-        expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A5.vcf", sample=config["samples"]),
+        # expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A5.vcf", sample=config["samples"]),
         # expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
-        expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU5.vcf", sample=config["samples"]),
+        # expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU5.vcf", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample=config["samples"], ext=EXTENSIONS),
-        # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
-        # expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
-        # expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
+        expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
+        expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
+        expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
@@ -358,7 +358,7 @@ rule filter_GQ20_smoove:
 
 
 
-# filter read support SU<10
+# filter read support SU<5
 
 rule read_support_SU_smoove:
     input:
@@ -380,31 +380,34 @@ rule read_support_SU_smoove:
 
 # move all sample vcf files in one dir
 # smoove
-# cp 01_mice_lines_smoove/03_read_support/* 04_calls_merged_per_sample/01_all_samples/
+# cp 01_mice_lines_smoove/03_read_support/*.vcf 04_calls_merged_per_sample/01_all_samples/
 # manta
-# cp 02_mice_lines_manta/05_read_support/* 04_calls_merged_per_sample/01_all_samples/
+# cp 02_mice_lines_manta/05_read_support/*.vcf 04_calls_merged_per_sample/01_all_samples/
 # whamg
-# cp 03_mice_lines_whamg/05_total_support/* 04_calls_merged_per_sample/01_all_samples/
+# cp 03_mice_lines_whamg/05_total_support/*.vcf 04_calls_merged_per_sample/01_all_samples/
 
 
 # sort vcf files
-
-# rule sort_vcf:
-#     input:        # multiple file extensions per sample ID (filtered outputs of different callers)
-#         expand("04_calls_merged_per_sample/01_all_samples/{sample}_{ext}", sample="{sample}", ext=EXTENSIONS)
-#     output:
-#         expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample="{sample}", ext=EXTENSIONS)
-#     log:
-#         expand("logs/merging/{sample}_srt_{ext}.log", sample="{sample}", ext=EXTENSIONS)
-#     conda:
-#         "envs/bcftools.yml"
-#     shell:
-#         """
-#         bcftools sort -Ov {input[0]} -o {output[0]} 2> {log[0]}
-#         bcftools sort -Ov {input[1]} -o {output[1]} 2> {log[1]}
-#         bcftools sort -Ov {input[2]} -o {output[2]} 2> {log[2]}
-#         """
+rule sort_vcf:
+    input:        # multiple file extensions per sample ID (filtered outputs of different callers)
+        expand("04_calls_merged_per_sample/01_all_samples/{sample}_{ext}", sample="{sample}", ext=EXTENSIONS)
+    output:
+        expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample="{sample}", ext=EXTENSIONS)
+    log:
+        expand("logs/merging/{sample}_srt_{ext}.log", sample="{sample}", ext=EXTENSIONS)
+    conda:
+        "envs/bcftools.yml"
+    shell:
+        """
+        bcftools sort -Ov {input[0]} -o {output[0]} 2> {log[0]}
+        bcftools sort -Ov {input[1]} -o {output[1]} 2> {log[1]}
+        bcftools sort -Ov {input[2]} -o {output[2]} 2> {log[2]}
         
+        """
+        
+# fails if vcf files are already sorted (whamg)
+
+
 
 
 ## SURVIVOR MERGE PER SAMPLE ##
@@ -424,7 +427,7 @@ rule list_sample_sv_call_sets:
 
 
 
-# merge SVs with start/end within 500 bp, called by at least 2 callers, same SV type, min.size 50 bp
+# merge SVs with start/end within 1000 bp, called by at least 2 callers, same SV type, min.size 50 bp
 
 rule survivor_merge:
     input:
@@ -434,7 +437,7 @@ rule survivor_merge:
     log:
         "logs/merging/{sample}_surv.log"
     params:
-        "500 2 1 0 0 50"
+        "1000 2 1 0 0 50"
     conda:
         "envs/survivor.yml"
     shell:
