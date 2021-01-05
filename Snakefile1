@@ -61,13 +61,13 @@ rule all:
         # expand("02_mice_lines_manta/02_converted/{sample}_inv.vcf", sample=config["samples"]),
         # expand("02_mice_lines_manta/03_filter_pass/{sample}_filt_pass.vcf", sample=config["samples"]),
         # expand("02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf", sample=config["samples"]),
-        # expand("02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf", sample=config["samples"]),
+        expand("02_mice_lines_manta/05_read_support/{sample}_PR3_SR3.vcf", sample=config["samples"]),
         # expand("03_mice_lines_whamg/02_filtered/{sample}_wham_filtered.vcf", sample=config["samples"]),
         # expand("03_mice_lines_whamg/03_genotyped/{sample}_wham.genotyped.vcf", sample=config["samples"]),
         # expand("03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf", sample=config["samples"]),
-        # expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf", sample=config["samples"]),
+        expand("03_mice_lines_whamg/05_total_support/{sample}_wham_A5.vcf", sample=config["samples"]),
         # expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
-        # expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf", sample=config["samples"]),
+        expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU5.vcf", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample=config["samples"], ext=EXTENSIONS),
         # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
@@ -77,8 +77,8 @@ rule all:
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats", mice_line=MICE_LINES),
-        # "06_all_mice_lines_merged/mice_lines_all.vcf",
-        "06_all_mice_lines_merged/mice_lines_all.stats"
+        # # "06_all_mice_lines_merged/mice_lines_all.vcf",
+        # # "06_all_mice_lines_merged/mice_lines_all.stats"
 
     
 
@@ -232,15 +232,15 @@ rule filter_GQ20_manta:
         "bcftools filter -e 'GQ<20' {input} > {output} 2> {log}"
 
 
-# include sites with read support >=5
+# include sites with read support >=3
 
 rule keep_PR_SR_manta:
     input:
         "02_mice_lines_manta/04_GQ20/{sample}_GQ20.vcf"
     output:
-        "02_mice_lines_manta/05_read_support/{sample}_PR5_SR5.vcf"
+        "02_mice_lines_manta/05_read_support/{sample}_PR3_SR3.vcf"
     log:
-        "logs/manta/05_read_support/{sample}_PR5_SR5.log"
+        "logs/manta/05_read_support/{sample}_PR3_SR3.log"
     conda:
         "envs/bcftools.yml"
     shell:
@@ -319,9 +319,9 @@ rule total_support_A_whamg:
     input:
         "03_mice_lines_whamg/04_GQ20/{sample}_wham_GQ20.vcf"
     output:
-        "03_mice_lines_whamg/05_total_support/{sample}_wham_A10.vcf"
+        "03_mice_lines_whamg/05_total_support/{sample}_wham_A5.vcf"
     log:
-        "logs/whamg/05_total_support/{sample}_A10.log"
+        "logs/whamg/05_total_support/{sample}_A5.log"
     conda:
         "envs/bcftools.yml"
     shell:
@@ -364,9 +364,9 @@ rule read_support_SU_smoove:
     input:
         "01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf"
     output:
-        "01_mice_lines_smoove/03_read_support/{sample}_smoove_SU10.vcf"
+        "01_mice_lines_smoove/03_read_support/{sample}_smoove_SU5.vcf"
     log:
-        "logs/smoove/03_read_support/{sample}_SU10.log"
+        "logs/smoove/03_read_support/{sample}_SU5.log"
     conda:
         "envs/bcftools.yml"
     shell:
