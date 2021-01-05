@@ -69,16 +69,16 @@ rule all:
         # expand("01_mice_lines_smoove/02_GQ20/{sample}_smoove_GQ20.vcf", sample=config["samples"]),
         # expand("01_mice_lines_smoove/03_read_support/{sample}_smoove_SU5.vcf", sample=config["samples"]),
         # expand("04_calls_merged_per_sample/02_sorted/{sample}_srt_{ext}", sample=config["samples"], ext=EXTENSIONS),
-        expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
-        expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
-        expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
+        # expand("04_calls_merged_per_sample/03_call_sets_list/{sample}.list", sample=config["samples"]),
+        # expand("04_calls_merged_per_sample/04_sample_merged_callers/{sample}_merged.vcf", sample=config["samples"]),
+        # expand("04_calls_merged_per_sample/05_survivor_sample_stats/{sample}.stats", sample=config["samples"]),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/02_merged_lines_stats/{mice_line}.stats", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line=MICE_LINES),
         # expand("05_calls_merged_per_line/04_merged_lines_filt_stats/{mice_line}_filt.stats", mice_line=MICE_LINES),
-        # # "06_all_mice_lines_merged/mice_lines_all.vcf",
-        # # "06_all_mice_lines_merged/mice_lines_all.stats"
+        "06_all_mice_lines_merged/mice_lines_all.vcf",
+        "06_all_mice_lines_merged/mice_lines_all.stats"
 
     
 
@@ -404,7 +404,7 @@ rule sort_vcf:
         bcftools sort -Ov {input[2]} -o {output[2]} 2> {log[2]}
         
         """
-        
+
 # fails if vcf files are already sorted (whamg)
 
 
@@ -444,7 +444,6 @@ rule survivor_merge:
         "SURVIVOR merge {input} {params} {output} 2> {log}"
 
 
-
 # run stats per sample
 rule survivor_sample_stats:
     input:
@@ -459,6 +458,10 @@ rule survivor_sample_stats:
         "envs/survivor.yml"
     shell:
         "SURVIVOR stats {input} {params} {output} 2> {log}"
+
+
+
+## SURVIVOR MERGE PER LINE ##
 
 # split samples per mice line
 
@@ -512,6 +515,8 @@ rule change_SUPP_type:
 
 
 # keep SV calls for which at least 60% (15) of samples passed filter and merging steps
+
+# run separately with lower cutoff for DU6 mice line, due to the low coverage, 12 samples SUPP>=12 - done
 rule min_15_samples_per_line:
     input:
         "05_calls_merged_per_line/01_merged_lines/{mice_line}_merged_int.vcf"
@@ -559,6 +564,9 @@ rule merge_mice_lines:
         "envs/survivor.yml"
     shell:
         "SURVIVOR merge {input} {params} {output} 2> {log}"
+
+# rename mice lines in the vcf files
+# sort merged vcf
 
 
 rule all_mice_lines_stats:
