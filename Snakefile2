@@ -5,16 +5,16 @@
 
 REF="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
 
-MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU", "FERT"]
+MICE_LINES=["DU6", "DU6P", "DUC", "DUhLB", "DUK", "FZTDU"] #"FERT"]
 SV_TYPE=["DEL", "DUP", "INV", "INS", "TRA"]
 
 rule all:
     input:
-      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES)
-      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES),
-      # "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf",
+      expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES),
+      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES)
+      "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf",
       # expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.stats", mice_line=MICE_LINES),
-      expand("06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE)
+      # expand("06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE)
 
 
 
@@ -134,17 +134,17 @@ rule unique_SVs_per_line_stats:
     "SURVIVOR stats {input} {params} {output} 2> {log}"
 
 
-rule grep_SV_types_from_each_line:
-  input:
-    expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.vcf", mice_line="{mice_line}")
-  output:
-    "06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf"
-  log:
-    "log/unique_svs/{mice_line}_unique{sv_type}.log"
-  params:
-    sv_type="{sv_type}"
-  shell:
-    "grep -v '^#' {input} | grep 'SVTYPE={params.sv_type}' > {output} 2> {log}"
+# rule grep_SV_types_from_each_line:
+#   input:
+#     expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.vcf", mice_line="{mice_line}")
+#   output:
+#     "06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf"
+#   log:
+#     "log/unique_svs/{mice_line}_unique{sv_type}.log"
+#   params:
+#     sv_type="{sv_type}"
+#   shell:
+#     "grep -v '^#' {input} | grep 'SVTYPE={params.sv_type}' > {output} 2> {log}"
 
 
 
@@ -185,33 +185,33 @@ rule grep_SV_types_from_each_line:
 # "Phenotypes,file=annotation/vep/phenotypes.gff.gz,include_types=Gene"],
 
 
-# download snpeff ref db
-rule get_snpeff_db:
-    output:
-        directory("annotation/snpeff/GRCm38.86")
-    log:
-        "logs/snpeff/snpEff_GRCm38.86_download.log"
-    params:
-        reference="GRCm38.86"
-    wrapper:
-        "0.67.0/bio/snpeff/download"
+# # download snpeff ref db
+# rule get_snpeff_db:
+#     output:
+#         directory("annotation/snpeff/GRCm38.86")
+#     log:
+#         "logs/snpeff/snpEff_GRCm38.86_download.log"
+#     params:
+#         reference="GRCm38.86"
+#     wrapper:
+#         "0.67.0/bio/snpeff/download"
 
 
-# annotate final vcf with SnpEff
-rule snpeff_annotate:
-    input:
-        calls="01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf", 
-        db="annotation/snpeff/GRCm38.86" 
-    output:
-        calls="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
-        stats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
-        csvstats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
-    log:
-        "logs/snpeff/annotate.log"
-    params:
-        extra="-Xmx4g"         
-    wrapper:
-        "0.67.0/bio/snpeff/annotate"
+# # annotate final vcf with SnpEff
+# rule snpeff_annotate:
+#     input:
+#         calls="01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf", 
+#         db="annotation/snpeff/GRCm38.86" 
+#     output:
+#         calls="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
+#         stats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
+#         csvstats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
+#     log:
+#         "logs/snpeff/annotate.log"
+#     params:
+#         extra="-Xmx4g"         
+#     wrapper:
+#         "0.67.0/bio/snpeff/annotate"
 
 
 

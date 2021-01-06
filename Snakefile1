@@ -566,7 +566,7 @@ rule merge_mice_lines:
         "SURVIVOR merge {input} {params} {output} 2> {log}"
 
 # rename mice lines in the vcf files
-# sort merged vcf
+
 
 
 rule all_mice_lines_stats:
