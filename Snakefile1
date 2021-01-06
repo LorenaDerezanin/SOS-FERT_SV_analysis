@@ -591,6 +591,8 @@ rule all_mice_lines_stats:
 # perl -ne 'print "$1\n" if /SUPP_VEC=([^,;]+)/' mice_lines_all.vep.annotated.vcf | sed -e 's/\(.\)/\1 /g' > mice_lines_all.vep.annotated.vcf.overlap.txt
 
 
+
+
 # remove unlocalized scfs from header
 
 # for f in $VEP_PREP_DIR/01_unlocalized_scf_removed/*.vcf
@@ -601,8 +603,6 @@ rule all_mice_lines_stats:
 
 
 # annotation
-
-
 
 
 
