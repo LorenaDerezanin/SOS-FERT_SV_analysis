@@ -200,19 +200,6 @@ rule grep_SV_types_from_each_line:
 
 
 
-
-
-
-
-
-# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=DEL" > all_species_DEL.vcf
-# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=DUP" > all_species_DUP.vcf
-# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=INV" > all_species_INV.vcf
-# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=INS" > all_species_INS.vcf
-# grep -v "^#" mustelids_lumpy_manta_wham_noNs.vcf | grep "SVTYPE=TRA" > all_species_TRA.vcf
-
-
-
 # get SV lengths
 # get percentages of each SV type in total SVs
 
