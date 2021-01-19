@@ -192,7 +192,7 @@ rule grep_SV_types_from_each_line:
   output:
     "06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf"
   log:
-    "log/unique_svs/{mice_line}_unique{sv_type}.log"
+    "logs/unique_svs/{mice_line}_unique{sv_type}.log"
   params:
     sv_type="{sv_type}"
   shell:
