@@ -149,7 +149,7 @@ rule manta_sv_call:
 
 
 
-# # whamg SV call
+# whamg SV call
 rule whamg_sv_call:
     input:
         lambda wildcards: config["samples"][wildcards.sample]
@@ -195,10 +195,7 @@ rule convert_INVs_manta:
         "logs/manta/02_converted/{sample}_inv_convert.log"
     shell:
         "scripts/convertInversion.py scripts/samtools {REF} {input} > {output} 2> {log}"
-# running scripts originally from miniconda3/envs/manta/share/manta-1.6.0-0/libexec
 
-# $MANTA_LIBEXEC/convertInversion.py $MANTA_LIBEXEC/samtools \
-# $REF/MusPutFur1.0_HiC.fasta BFF_joint_call_diploidSV_chr_order.vcf > BFF_joint_call_diploidSV_chr_inv_fixed.vcf
 
 
 
