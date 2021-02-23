@@ -206,8 +206,6 @@ rule grep_SV_types_from_each_line:
 
 
 
-
-
   # vep \
   # -i 05_calls_merged_per_line/03_merged_lines_filtered/DU6_filt.vcf \
   # --species mus_musculus \
@@ -232,36 +230,8 @@ rule grep_SV_types_from_each_line:
 
 
 
-# "Phenotypes,file=annotation/vep/phenotypes.gff.gz,include_types=Gene"],
 
 
-# # download snpeff ref db
-# rule get_snpeff_db:
-#     output:
-#         directory("annotation/snpeff/GRCm38.86")
-#     log:
-#         "logs/snpeff/snpEff_GRCm38.86_download.log"
-#     params:
-#         reference="GRCm38.86"
-#     wrapper:
-#         "0.67.0/bio/snpeff/download"
-
-
-# # annotate final vcf with SnpEff
-# rule snpeff_annotate:
-#     input:
-#         calls="01_mice_lines_smoove/04_pasted/cohort.smoove.square.vcf", 
-#         db="annotation/snpeff/GRCm38.86" 
-#     output:
-#         calls="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.vcf",   
-#         stats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.html",  
-#         csvstats="01_mice_lines_smoove/annotated/mice_variants.snpeff.annotated.csv" 
-#     log:
-#         "logs/snpeff/annotate.log"
-#     params:
-#         extra="-Xmx4g"         
-#     wrapper:
-#         "0.67.0/bio/snpeff/annotate"
 
 
 
