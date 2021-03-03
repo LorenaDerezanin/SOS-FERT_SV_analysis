@@ -589,7 +589,6 @@ rule all_mice_lines_stats:
 
 
 
-
 # remove unlocalized scfs from header
 
 # for f in $VEP_PREP_DIR/01_unlocalized_scf_removed/*.vcf
