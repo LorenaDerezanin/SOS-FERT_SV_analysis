@@ -88,8 +88,6 @@ rule grep_SVs_overlapping_genes:
       "05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_SVs_gene_overlaps.vcf"
   log:
       "logs/vep/{mice_line}_sv_gene_ovrlp.log"
-  params:
-
   shell:
       "grep -v '^#' {input} | grep 'ENSMUSG' > {output} 2> {log}" 
 
@@ -139,7 +137,6 @@ rule vep_annotate_all_mice_lines:
       annotated="06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf"
       # stats="05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html"
     params:
-      # plugin=["GO"],
       extra="--coding_only --per_gene --gene_phenotype --symbol --protein --sift b --overlaps --max_sv_size 200000000 --force_overwrite" 
     log:
       "logs/vep/mice_lines_all.vep.anno.log"
