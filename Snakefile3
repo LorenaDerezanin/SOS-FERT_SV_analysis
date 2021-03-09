@@ -1,0 +1,39 @@
+
+
+### SAMPLOT SV SNAPSHOTS ###
+
+# samplot screenshots of SV examples from bam files 
+
+
+SV_TYPE=["DEL", "DUP", "INV"]
+MICE_LINE=["DU6", "DU6P", "DUhLB", "DUC", "DUK", "FZTDU"]
+
+
+
+
+BAM="/home/fb4/derezanin/sos-fert/04_alignments_merged_dedup_BQSR/results/merged"  # high coverage
+BED="/home/fb4/derezanin/sos-fert/20_structural_variants/git/SOS-FERT_SV_analysis"
+
+
+VCF=/home/fb4/derezanin/sos-fert/20_structural_variants/git/SOS-FERT_SV_analysis/08_high_cov_10_samples_test/06_all_mice_lines_merged/private_SVs_per_line/DUC
+
+  # vcf DUC
+  samplot vcf \
+    --filter "SVTYPE == 'DEL'" \
+    --filter "SVTYPE == 'DUP'" \
+    --filter "SVTYPE == 'INV'" \
+    --vcf $VCF/DUC_unique_genes_SVs.vcf \
+    -d DUC_SV_snapshots/ \
+    -O png \
+    -b example.bam 
+
+H07758
+H07759
+H07760
+H07761
+H07762
+H07763
+H07764
+H07765
+H07766
+H07767
