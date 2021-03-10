@@ -25,17 +25,22 @@ rule all:
 # DUC
 
 samplot plot \
-  -n H07758 H07759 H07760 H07761 H07762  \
+  -n H07758 H07759 H07760 H07761 H07762 H07763 H07764 H07765 H07766 H07767 \
   -b $BAM/H07758-L1.merged.sorted.dedup.bqsr.bam \
      $BAM2/H07759.merged.sorted.dedup.bqsr.bam \
      $BAM/H07760-L1.merged.sorted.dedup.bqsr.bam \
      $BAM/H07761-L1.merged.sorted.dedup.bqsr.bam \
      $BAM/H07762-L1.merged.sorted.dedup.bqsr.bam \
-  -o DUC_DUP_chr13_22086834_23231578_5samples.png \
-  -c 13 \
-  -s 22086834 \
-  -e 23231578 \
-  -t DUP \
+     $BAM/H07763-L1.merged.sorted.dedup.bqsr.bam \
+     $BAM/H07764-L1.merged.sorted.dedup.bqsr.bam \
+     $BAM/H07765-L1.merged.sorted.dedup.bqsr.bam \
+     $BAM/H07766-L1.merged.sorted.dedup.bqsr.bam \
+     $BAM/H07767-L1.merged.sorted.dedup.bqsr.bam \
+  -o DUC_INV_chr11_54723674_54740298.png \
+  -c 11 \
+  -s 54723674 \
+  -e 54740298 \
+  -t INV \
   -d 100 \
   -A $BED/Mus_musculus.GRCm38_output_ranges.bed.gz
   # -T Mus_musculus.GRCm38.93_srt.gff3.gz \
