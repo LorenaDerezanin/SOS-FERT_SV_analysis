@@ -11,9 +11,8 @@ SV_TYPE=["DEL", "DUP", "INV", "INS"]
 rule all:
     input:
         # expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/{mice_line}_all_SVs_filtered.vep.annot.vcf", mice_line=MICE_LINES),
-        expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_SVs_genes.vcf", mice_line=MICE_LINES),
+        # expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_SVs_genes.vcf", mice_line=MICE_LINES),
         expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_genes_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE),
-
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES),
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES),
       # expand("05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_SVs_gene_overlaps.vcf", mice_line=MICE_LINES),
@@ -112,7 +111,7 @@ rule grep_SV_types_genes_ovrlp:
   params:
       sv_type="{sv_type}"
   shell:
-      "grep -v '^#' {input} | grep 'SVTYPE={params.sv_type}' > {output} 2> {log}" 
+      "grep -E '^#|SVTYPE={params.sv_type}' {input} > {output} 2> {log}" 
 
 
 
