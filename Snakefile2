@@ -10,7 +10,11 @@ SV_TYPE=["DEL", "DUP", "INV", "INS"]
 
 rule all:
     input:
-      expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES),
+        # expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/{mice_line}_all_SVs_filtered.vep.annot.vcf", mice_line=MICE_LINES),
+        expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_SVs_genes.vcf", mice_line=MICE_LINES),
+        expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_genes_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE),
+
+      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf",  mice_line=MICE_LINES),
       # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html", mice_line=MICE_LINES),
       # expand("05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_SVs_gene_overlaps.vcf", mice_line=MICE_LINES),
       # expand("05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_gene_overlaps_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE),
@@ -18,8 +22,6 @@ rule all:
       # "06_all_mice_lines_merged/mice_lines_all.vep.annotated.vcf",
       # expand("06_all_mice_lines_merged/{mice_line}_unique_SVs.stats", mice_line=MICE_LINES),
       # expand("06_all_mice_lines_merged/{mice_line}_unique_{sv_type}.vcf", mice_line=MICE_LINES, sv_type=SV_TYPE)
-
-
 
 
 
@@ -36,6 +38,7 @@ rule get_vep_cache:
     # cache: True 
     wrapper:
       "0.67.0/bio/vep/cache"
+
 
 
 # download vep plugins
@@ -55,18 +58,19 @@ rule get_vep_plugins:
 
 rule vep_annotate_conda:
     input:
-      calls=expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line="{mice_line}"),
+      # calls=expand("05_calls_merged_per_line/03_merged_lines_filtered/{mice_line}_filt.vcf", mice_line="{mice_line}"),
+      calls=expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/{mice_line}_merged_all_SVs_filtered.vcf", mice_line="{mice_line}"),
       cache="annotation/vep/cache",
       # plugins="annotation/vep/plugins",
-      fasta="../../../reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
+      fasta="/projekte/I2-SOS-FERT/reference_genome_ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa"
     output:
-      annotated="05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf"
+      annotated="10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/{mice_line}_all_SVs_filtered.vep.annot.vcf"
       # stats="05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.html"
     params:
       # plugin=["GO"],
       extra="--coding_only --per_gene --gene_phenotype --symbol --protein --sift b --overlaps --max_sv_size 200000000 --force_overwrite" 
     log:
-      "logs/vep/{mice_line}.vep.anno.log"
+      "logs/vep/{mice_line}_filt.vep.anno.log"
     threads: 4
     conda:
       "envs/vep101.yml"
@@ -83,22 +87,26 @@ rule vep_annotate_conda:
 
 rule grep_SVs_overlapping_genes:
   input:
-      expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf", mice_line="{mice_line}")
+      # expand("05_calls_merged_per_line/05_annotated/{mice_line}.vep.annotated.vcf", mice_line="{mice_line}")
+      expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/{mice_line}_all_SVs_filtered.vep.annot.vcf", mice_line="{mice_line}")
   output:
-      "05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_SVs_gene_overlaps.vcf"
+      "10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_SVs_genes.vcf"
   log:
       "logs/vep/{mice_line}_sv_gene_ovrlp.log"
   shell:
-      "grep -v '^#' {input} | grep 'ENSMUSG' > {output} 2> {log}" 
+      "grep -E '^#|ENSMUSG' {input} > {output} 2> {log}" 
+
 
 
 
 # subset SV types in each line
 rule grep_SV_types_genes_ovrlp:
   input:
-      expand("05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_SVs_gene_overlaps.vcf", mice_line="{mice_line}")
+      # expand("05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_SVs_gene_overlaps.vcf", mice_line="{mice_line}")
+      expand("10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_SVs_genes.vcf", mice_line="{mice_line}")
   output:
-      "05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_gene_overlaps_{sv_type}.vcf"
+      # "05_calls_merged_per_line/05_annotated/02_SVs_gene_overlaps/{mice_line}_genes_{sv_type}.vcf"
+      "10_comparison_full_set_high_low_cov/06_merged_high_low_SVs/04_annotated/01_SVs_gene_overlaps/{mice_line}_genes_{sv_type}.vcf"
   log:
       "logs/vep/{mice_line}_sv_gene_ovrlp_{sv_type}.log"
   params:
