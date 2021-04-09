@@ -402,7 +402,7 @@ rule sort_vcf:
         
         """
 
-# fails if vcf files are already sorted (whamg)
+# fails if vcf files don't have header with chr/scf info
 
 
 
