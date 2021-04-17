@@ -23,13 +23,13 @@
 # WD="$HOME/sos-fert/20_structural_variants/git/SOS-FERT_SV_analysis"
 
 # # batch1 (remove 10 samples that have been re-sequenced in batch2)
-# ls *.bam | awk -F- '{print $1 ": batch1/" $0}' > $WD/config1.yaml
+# ls *.bam | awk -F- '{print "  " $1 ": batch1/" $0}' > $WD/config1.yaml
 
 # # batch2 (10 re-seq samples)
-# ls *.bam | awk -F. '{print $1 ": batch2/" $0}' > $WD/config2.yaml
+# ls *.bam | awk -F. '{print "  " $1 ": batch2/" $0}' > $WD/config2.yaml
 
 # # batch3 (remove sample: I34772-L1_S63_L003)
-# ls *.bam | awk -F- '{print $1 ": batch3/" $0}' > $WD/config3.yaml 
+# ls *.bam | awk -F- '{print "  " $1 ": batch3/" $0}' > $WD/config3.yaml 
 
 # #cat config files (add "samples:")
 # cat config1.yaml config2.yaml config3.yaml >> config.yaml
