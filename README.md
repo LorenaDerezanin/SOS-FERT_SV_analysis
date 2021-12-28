@@ -2,7 +2,7 @@
 
 Identification and functional annotation of genic structural variants in five selected mice lines and a control line. Preprint **"Genomic characterization of world’s longest selection experiment 
 in mouse reveals the complexity of polygenic traits"** available at [bioRxiv](https://doi.org/10.1101/2021.05.28.446207).
-All scripts and data used in the manuscript accessible at [SOS-FERT_analysis](https://github.com/sergiopalmavera/WGS_analysis_mmu).
+All scripts and data used in the manuscript accessible at [SOS-FERT_analysis_github](https://github.com/sergiopalmavera/WGS_analysis_mmu).
 
 - 6 mice lines (25 samples per line): two high fertility lines (different physiological pathways), lean (high protein mass) and "obese" line, endurance line, control
 - snakemake pipeline for parsing bam files, SV calling and filtering, VEP annotation
