@@ -1,0 +1,747 @@
+---
+title: "Mice_lines_SV_analysis"
+author: "Lorena Derezanin"
+date: "12/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+
+# initialize renv for a private pkg library and project reproducibility
+#renv::init()
+#renv::activate()
+
+# load packages
+# install.packages("BiocManager")
+library(BiocManager)
+options(repos = BiocManager::repositories()) # Bioconductor repo added to renv
+
+# renv::install("tidyverse")
+# renv::install("data.table")
+# renv::install("RColorBrewer")
+# renv::install("VennDiagram")
+# renv::install("UpSetR")
+# renv::install("patchwork")
+# renv::install("viridis")
+# renv::install("wesanderson")
+# renv::install("pheatmap")
+
+
+#renv::install("stringi")
+
+library(data.table)
+library(tinytex)
+library(knitr)
+library(stringi)
+library(UpSetR)
+library(tidyverse)
+library(RColorBrewer)
+library(VennDiagram)
+library(grid)
+library(patchwork)
+library(viridis)
+library(wesanderson)
+library(pheatmap)
+library(scales)
+
+```
+
+
+
+### Shared and private SVs in all mice lines ###
+
+## High coverage samples
+
+```{r upset plot high cov. samples SVs, echo=FALSE}
+
+
+png(file = "UpSetR_mice_lines_all_SVs_filtered.png", width = 3400, height = 1800, res = 300)
+
+survivor_matrix <- read.table("overlap_matrices_for_upset_plots/mice_lines_all_SVs_filtered_overlap.txt")
+colnames(survivor_matrix) <- c("DU6","DU6P","DUC","DUhLB", "DUK", "FZTDU") 
+                                         
+
+#survivor_matrix_all_cols <- survivor_matrix %>% mutate(SV_MantaIDs = mantaIDs) %>% select(SV_MantaIDs, everything())
+
+upset(
+      survivor_matrix, 
+      nsets = 6, nintersects = 30, 
+      mb.ratio = c(0.7, 0.3), matrix.color = "brown1", 
+      sets.bar.color = "cornflowerblue", order.by = "freq", 
+      keep.order = FALSE, set_size.show = F, 
+      text.scale = 1.0, point.size = 2.5, line.size = 1,
+      
+      )
+
+dev.off()
+
+
+```
+
+
+## Low coverage samples 
+
+```{r upset plot low cov. samples SVs, echo=FALSE}
+
+
+png(file = "UpSetR_low_cov_no_TRA.png", width = 3200, height = 1800, res = 300)
+
+survivor_matrix <- read.table("overlap_matrices_for_upset_plots/mice_lines_no_TRA_low_overlap.txt")
+colnames(survivor_matrix) <- c("DU6","DU6P","DUC","DUhLB", "DUK", "FZTDU") 
+                                         
+
+#survivor_matrix_all_cols <- survivor_matrix %>% mutate(SV_MantaIDs = mantaIDs) %>% select(SV_MantaIDs, everything())
+
+upset(
+      survivor_matrix, 
+      nsets = 6, nintersects = 34, 
+      mb.ratio = c(0.7, 0.3), matrix.color = "brown1", 
+      sets.bar.color = "cornflowerblue", order.by = "freq", 
+      keep.order = FALSE, set_size.show = F, 
+      text.scale = 1.0, point.size = 2.5, line.size = 1,
+      
+      )
+
+dev.off()
+
+```
+
+# Venn diagram for each line - full set/high/low coverage
+
+```{r Venn diagram SV gene overlaps}
+
+FZTDU_survivor_matrix <- read.table("FZTDU.overlap.txt")
+colnames(FZTDU_survivor_matrix) <- c("FZTDU_full","FZTDU_high","FZTDU_low") 
+diagram_colors <- brewer.pal(3, "Set1")
+
+venn.diagram(
+        list(
+          full_set=which(FZTDU_survivor_matrix[,1]==1), 
+          high_cov=which(FZTDU_survivor_matrix[,2]==1), 
+          low_cov=which(FZTDU_survivor_matrix[,3]==1)
+        ), 
+        # colors, lines
+        fill = diagram_colors, 
+        lwd = 2, 
+        lty ='blank', 
+        alpha = c(0.5, 0.5, 0.5), 
+        # numbers
+        cex = 0.7, 
+        fontface = "bold",  
+        fontfamily = "sans",
+        # category names
+        cat.cex = 0.7,
+        cat.fontface = "bold",
+        cat.default.pos = "outer",
+        cat.pos = c(-20, 20, 125),
+        cat.dist = c(0.055, 0.055, 0.075),
+        cat.fontfamily = "sans",
+        rotation = 1,
+        # output features
+        imagetype="png" ,
+        height = 750 , 
+        width = 750 , 
+        resolution = 300,
+        compression = "lzw",
+        filename = "FZTDU_venn.png"
+)
+
+
+```
+
+
+
+
+### Distribution of SVs along reference chromosomes ###
+
+```{r SV distribution on chromosomes}
+
+# import list of ordered mouse reference chromosomes
+#ordered_scf_dom_fer <- read.table("input_data/scf_list.tsv") %>% 
+                       rename(Scaffolds = "V1") %>%
+                       mutate(Chromosomes = c(seq(1:19),"X")) %>%
+                       select(Chromosomes, everything())
+
+```
+
+#### All SVs in all mice lines ####
+
+```{r plot all mice SVs stats}
+
+# mice lines- all SVs per chromosome 
+mice_chr_sv_distro <- read.table("mice_lines_all.stats_CHR", header = T) #%>%
+                     #select(.,-TRA) 
+                    
+
+# remove unused cols
+mice_chr_ordered_long <- mice_chr_sv_distro %>%
+        select(-INS) %>%
+        pivot_longer(!Chr, names_to = "SV_type", values_to = "Count") 
+        # extend table into longer format (transpose SV types per Chr)
+ 
+# plot SV distro on chr
+png(file = "mice_all_lines_SVs_CHR.png", width = 1000, height = 1000, res = 200)
+
+mice_chr_ordered_long %>%
+        mutate(Chr = factor(Chr, levels = unique(Chr))) %>%
+      # to keep dataframe order instead of alphabetical, refactor col
+        ggplot(aes(x = factor(Chr), y = Count , fill = factor(SV_type))) +
+            geom_bar(stat = "identity", position = "dodge") +
+            scale_fill_manual(values = c("cornflowerblue", "brown1", "darkgoldenrod1", "darkorchid4"), name = "SV type") +
+            labs(title = "Distribution of SVs along ref. mouse chromosomes",
+                 x = "Chromosomes", y = "Number of SVs") +
+            theme_minimal() +
+            theme(axis.title.x = element_text(size = 10, vjust = -0.90),
+                  axis.title.y = element_text(size = 10, vjust = 1.90),
+                  legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+            theme(plot.title = element_text(size = 12,
+                  margin = margin(0, 0, 6, 0))) +
+            # facet_grid(. ~ SV_type, scales= "free") +
+            facet_wrap(. ~ SV_type, ncol=1, scales= "free") # allow diff. scales in plot, y-axis in this case 
+
+dev.off()  
+
+
+```
+
+
+### SV size distribution ###
+
+```{r SV size bins for each SV type - all mice lines}
+
+all_mice_lines_sv_size_distro <- read.table("mice_lines_all.stats", header = T) %>%
+                              select(-INS, -TRA, -UNK) %>%
+                              slice(-1) %>% # remove 1st row
+                              rename_all(toupper) %>%
+                              pivot_longer(!LEN, names_to = "SV_type", values_to = "Count") 
+                              # extend table into longer format 
+
+```
+
+```{r plot size bins for all mice lines}
+
+
+png(file = "all_mice_lines_SV_size_distro.png", width = 1000, height = 800, res = 300)
+
+all_mice_lines_sv_size_distro %>%
+        mutate(SV_type = factor(SV_type, levels = unique(SV_type))) %>%
+        # to keep dataframe order instead of alphabetical, refactor cols
+        mutate(LEN = factor(LEN, levels = unique(LEN))) %>%
+        ggplot(aes(x = factor(LEN), y = Count , fill = factor(SV_type))) +
+            geom_bar(stat = "identity", position = "dodge") +
+            scale_fill_manual(values = c("cornflowerblue", "brown1", "darkgoldenrod1", "darkolivegreen3"), name = "SV type") +
+            labs(title = "SV size distribution in all mice lines",
+                 x = "SV size bins", y = "Number of SVs") +
+            theme_light() +
+            theme(axis.title.x = element_text(size = 10, vjust = -0.90),
+                  axis.title.y = element_text(size = 10, vjust = 1.90),
+                  legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+            theme(plot.title = element_text(size = 12,
+                  margin = margin(0, 0, 6, 0))) +
+                  expand_limits(y=c(0, 3500))
+                  #expand_limits(x = 0, y = 0)
+
+            # facet_grid(. ~ SV_type, scales= "free") +
+            #facet_wrap(. ~ SV_type, ncol=1, scales= "free") # allow diff. scales in plot, y-axis in this case 
+# set the intercept of x and y axis at (0,0)
+# p + expand_limits(x = 0, y = 0)
+# 
+# # change the axis limits
+# p + expand_limits(x=c(0,30), y=c(0, 150))
+
+
+dev.off()  
+
+
+
+```
+
+
+``` {r Mice Chromomap}
+
+# install.packages("chromoMap")
+ library(chromoMap)
+
+# prep chromosome coordinates
+chr_elements <-  read.table("mice_lines_stats/chr_elements_mice.csv", header = F, sep = ",")
+write.table(chr_elements, "mice_lines_stats/chr_elements_mice.txt", sep = "\t", col.names = F, row.names = F)  
+
+png(file = "DU6_SV_chromoMap.png", width = 1000, height = 800, res = 300)
+
+# load data
+DU6_gene_count <- read.table("mice_lines_stats/DU6_gene_counts.csv", header = T, sep = ",") 
+                 
+# prep SV coordinates
+DU6_SV_elements <- select(DU6_gene_count, SV_ID, Chr, SV_start, SV_end, Group) 
+
+write.table(DU6_SV_elements, "mice_lines_stats/DU6_SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+
+chromoMap("mice_lines_stats/chr_elements_mice.txt","mice_lines_stats/DU6_SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "DU6 line-specific genic structural variants")
+
+dev.off()  
+
+
+
+png(file = "DUC_SV_chromoMap.png", width = 1000, height = 800, res = 300)
+
+# load data
+DUC_gene_count <- read.table("mice_lines_stats/DUC_gene_counts.csv", header = T, sep = ",") 
+                 
+# prep SV coordinates
+DUC_SV_elements <- select(DUC_gene_count, SV_ID, Chr, SV_start, SV_end, Group) 
+
+write.table(DUC_SV_elements, "mice_lines_stats/DUC_SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+chromoMap("mice_lines_stats/chr_elements_mice.txt","mice_lines_stats/DUC_SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "DUC line-specific genic structural variants")
+
+dev.off()  
+
+
+
+png(file = "DUK_SV_chromoMap.png", width = 1000, height = 800, res = 300)
+
+# load data
+DUK_gene_count <- read.table("mice_lines_stats/DUK_gene_counts.csv", header = T, sep = ",") 
+                 
+# prep SV coordinates
+DUK_SV_elements <- select(DUK_gene_count, SV_type, Chr, SV_start, SV_end, Group) 
+
+write.table(DUK_SV_elements, "mice_lines_stats/DUK_SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+chromoMap("mice_lines_stats/chr_elements_mice.txt","mice_lines_stats/DUK_SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "DUK SVs overlapping protein-coding regions")
+
+dev.off()  
+
+
+
+png(file = "FZTDU_SV_chromoMap.png", width = 1000, height = 800, res = 300)
+
+# load data
+FZTDU_gene_count <- read.table("mice_lines_stats/FZTDU_gene_counts.csv", header = T, sep = ",") 
+                 
+# prep SV coordinates
+FZTDU_SV_elements <- select(FZTDU_gene_count, SV_type, Chr, SV_start, SV_end, Group) 
+
+write.table(FZTDU_SV_elements, "mice_lines_stats/FZTDU_SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+chromoMap("mice_lines_stats/chr_elements_mice.txt","mice_lines_stats/FZTDU_SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "FZTDU SVs overlapping protein-coding regions")
+
+dev.off()  
+
+
+png(file = "DU6P_SV_chromoMap.png", width = 1000, height = 800, res = 300)
+
+# load data
+DU6P_gene_count <- read.table("mice_lines_stats/DU6P_gene_counts.csv", header = T, sep = ",") 
+                 
+# prep SV coordinates
+DU6P_SV_elements <- select(DU6P_gene_count, SV_type, Chr, SV_start, SV_end, Group) 
+
+write.table(DU6P_SV_elements, "mice_lines_stats/DU6P_SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+chromoMap("mice_lines_stats/chr_elements_mice.txt","mice_lines_stats/DU6P_SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "DU6P SVs overlapping protein-coding regions")
+
+dev.off()  
+
+
+
+png(file = "DUhLB_SV_chromoMap.png", width = 1000, height = 800, res = 300)
+
+# load data
+DUhLB_gene_count <- read.table("mice_lines_stats/DUhLB_gene_counts.csv", header = T, sep = ",") 
+                 
+# prep SV coordinates
+DUhLB_SV_elements <- select(DUhLB_gene_count, SV_type, Chr, SV_start, SV_end, Group) 
+
+write.table(DUhLB_SV_elements, "mice_lines_stats/DUhLB_SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+chromoMap("mice_lines_stats/chr_elements_mice.txt","mice_lines_stats/DUhLB_SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "DUhLB SVs overlapping protein-coding regions")
+
+dev.off()  
+
+
+# chromomap doesn't plot to file, run plot in console, export plot
+
+```
+
+
+
+
+```{r SVs plotted on chromosomes}
+
+# install.packages("chromoMap")
+ library("chromoMap")
+
+
+png(file = "Mice_lines_SV_chromoMap.png", width = 1000, height = 800, res = 200)
+
+# load data
+Mice_lines_gene_count <- read.table("input_data/BFF_shared_SVs_gene_count.csv", header = T, sep = ",") 
+                 
+                  
+# prep chromosome coordinates
+chr_elements <-  select(BFF_gene_count, Chr, Chr_start, Chr_end) %>% 
+                 unique() %>%
+                 arrange(Chr) 
+
+write.table(chr_elements, "input_data/Chr_elements.txt", sep = "\t", col.names = F, row.names = F)             
+
+
+# prep SV coordinates
+SV_elements <- select(BFF_gene_count, SV_type, Chr, SV_start, SV_end, Group) 
+
+write.table(SV_elements, "input_data/SV_elements.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+
+chromoMap("input_data/Chr_elements.txt","input_data/SV_elements.txt", 
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_type = "categorical",
+          data_colors = list(c("cornflowerblue", "red", "orange")),
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_color = c("black"),
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "BFF-shared SVs overlapping protein-coding regions")
+
+
+dev.off()  
+
+
+```
+
+
+
+
+```{r gene count per SV plot}
+
+png(file = "BFF_SV_gene_counts_chromoMap.png", width = 1000, height = 800, res = 200)
+
+
+# prep SV annotations
+SV_genes <- select(BFF_gene_count, SV_type, Chr, SV_start, SV_end, No_of_genes)
+          
+
+write.table(SV_genes, "input_data/SV_gene_counts.txt", sep = "\t", col.names = F, row.names = F) 
+
+
+chromoMap("input_data/Chr_elements.txt","input_data/SV_gene_counts.txt",
+          segment_annotation = T,
+          data_based_color_map = T,
+          data_colors = list(c("lightgreen", "darkviolet")),
+          chr_color = c("black"),
+          data_type = "numeric",
+          legend = T,
+          lg_x = 220,
+          lg_y = 250,
+          chr_width = 8,
+          chr_length = 5,
+          ch_gap = 6,
+          top_margin = 55,
+          left_margin = 35,
+          canvas_width = 800,
+          title = "BFF-shared gene density overlapped by SVs")
+
+dev.off()  
+
+```
+
+
+
+```{r pie_charts_SV_types_mice_lines}
+
+png(file = "pie_charts_SV_types/mice_lines_private_SV_types.png", width = 1000, height = 800, res = 300)
+
+
+sv_types <-  read.table("pie_charts_SV_types/mice_lines_private_sv_types.csv", sep = ",", header = T) %>%
+             pivot_longer(!Mice_lines, names_to = "SV_type", values_to = "Count") %>%
+             group_by(Mice_lines) %>%
+             mutate(proportion = Count / sum(Count) *100)
+             
+
+sv_types %>% 
+    group_by("Mice_lines") %>%
+    ggplot(aes(x = "", y = proportion, fill = SV_type)) + 
+    geom_bar(width = 1, stat = "identity", position = position_fill(), color="white") +
+    #geom_text(aes(label = Count), position = position_fill(vjust = 0.5)) +
+    scale_fill_manual(values = c("cornflowerblue", "red", "gold2")) +
+    coord_polar(theta = "y") +
+    facet_wrap(Mice_lines~.)  +
+    theme_void() +
+    theme(axis.title.x = element_blank(),
+          axis.title.y = element_blank()) + 
+    theme(legend.position='right') + 
+    guides(fill=guide_legend(title = "SV type", nrow=3, byrow=TRUE)) 
+
+
+dev.off()  
+
+```
+
+
+```{r homozygous_vs_heterozygous_SVs}
+
+png(file = "03_homozygous_vs_heterozygous_SVs/homozygous_heterozygous_private_SVs.png", width = 1400, height = 600, res = 300)
+
+mice_lines <- read.table("03_homozygous_vs_heterozygous_SVs/homozygous_heterozygous_private_SVs.csv", sep = ",", header = T, fill = T) %>%
+              pivot_longer(!mice_lines, names_to = "Zygosity", values_to = "Count")
+
+mice_lines %>% 
+    ggplot(aes(x = mice_lines, y = Count, fill = Zygosity)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_manual(values = c("turquoise4", "tomato2"), name = "SV type") +
+    labs(x = "Mice lines", y = "Number of SVs") + 
+    theme_minimal() +
+    theme(axis.title.x = element_text(size = 10, vjust = -0.90),
+          axis.title.y = element_text(size = 10, vjust = 1.90),
+          legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+    theme(plot.title = element_text(size = 12,
+          margin = margin(0, 0, 6, 0))) 
+    
+    
+  dev.off()  
+       
+```
+``` {r heatmap mice lines}
+
+func_groups_genes <- as.matrix(read.table("heatmaps/func_gene_groups_heatmap.csv", sep = ",", header = T,  row.names = 1))
+
+png(file = "func_groups_genes_heatmap.png", width = 3200, height = 1600, res = 300)
+pheatmap(func_groups_genes, scale = "none", legend = T, display_numbers = F, number_format = "%.f", cluster_rows = F, cluster_cols = F, cellwidth = 80, cellheight = 30, fontsize = 12, fontsize_number = 12, angle_col = 0)
+
+dev.off()
+
+```
+
+``` {r plot SV types}
+
+# total and genic counts
+
+total_counts <- read.table("06_SV_types_lengths/private_SV_types.csv", sep = ",", header = T) %>%
+                rename_all(toupper) %>%
+                pivot_longer(!c(MICE_LINE), names_to = "SV_type", values_to = "Count")
+              # extend table into longer format (transpose SV types and counts per sp)
+
+png(file = "private_total_SV_types.png", width = 1200, height = 600, res = 300)
+
+total_counts %>% group_by(MICE_LINE) %>%
+                 ggplot(aes(x = factor(MICE_LINE), y = Count, fill = factor(SV_type))) +
+                 geom_col(position = "dodge") +
+                 scale_fill_manual(values = c("cornflowerblue", "brown1", "darkgoldenrod1"), name = "SV type") +
+                 # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) +
+                 labs(x = "Mice lines", y = "Number of SVs") +
+                 theme_light() +
+                 theme(axis.title.x = element_text(size = 8, vjust = -0.90),
+                 axis.title.y = element_text(size = 8, vjust = 1.90),
+                 legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+                 theme(plot.title = element_text(size = 10,
+                 margin = margin(0, 0, 6, 0))) 
+
+dev.off() 
+
+
+genic_counts <- read.table("06_SV_types_lengths/private_genic_SV_types.csv", sep = ",", header = T) %>%
+                rename_all(toupper) %>%
+                pivot_longer(!c(MICE_LINE), names_to = "SV_type", values_to = "Count")
+              # extend table into longer format (transpose SV types and counts per sp)
+
+png(file = "private_genic_SV_types.png", width = 1200, height = 600, res = 300)
+
+genic_counts %>% group_by(MICE_LINE) %>%
+                 ggplot(aes(x = factor(MICE_LINE), y = Count, fill = factor(SV_type))) +
+                 geom_col(position = "dodge") +
+                 scale_fill_manual(values = c("cornflowerblue", "brown1", "darkgoldenrod1"), name = "SV type") +
+                 # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) +
+                 labs(x = "Mice lines", y = "Number of SVs") +
+                 theme_light() +
+                 theme(axis.title.x = element_text(size = 8, vjust = -0.90),
+                 axis.title.y = element_text(size = 8, vjust = 1.90),
+                 legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+                 theme(plot.title = element_text(size = 10,
+                 margin = margin(0, 0, 6, 0))) 
+
+dev.off() 
+
+
+
+SV_counts <- read.table("06_SV_types_lengths/total_and_genic_SV_type_counts.csv", sep = ",", header = T) %>%
+                rename_all(toupper) %>%
+                pivot_longer(!c(MICE_LINE,GROUP), names_to = "SV_type", values_to = "Count")
+              # extend table into longer format (transpose SV types and counts per sp)
+
+png(file = "private_SV_types.png", width = 2400, height = 800, res = 300)
+
+SV_counts %>% group_by(GROUP) %>%
+                 ggplot(aes(x = factor(MICE_LINE), y = Count, fill = factor(SV_type))) +
+                 geom_col(position = "dodge") +
+                 scale_fill_manual(values = c("cornflowerblue", "brown1", "darkgoldenrod1"), name = "SV type") +
+                 # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) +
+                 labs(x = "Mice lines", y = "Number of SVs") +
+                 theme_light() +
+                 theme(axis.title.x = element_text(size = 8, vjust = -0.90),
+                 axis.title.y = element_text(size = 8, vjust = 1.90),
+                 legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+                 theme(plot.title = element_text(size = 10,
+                 margin = margin(0, 0, 6, 0))) +
+                 theme(strip.text.x = element_blank()) +
+                 facet_grid(. ~ SV_TYPE, scales= "free_y") +
+                 facet_wrap(. ~ GROUP, ncol = 3, nrow = 2, scales= "free_y") # allow diff. scales in plot,
+
+dev.off() 
+
+
+```
+
+
+
+
+``` {r barplot SV lengths}
+
+sv_lengths <- read.table("06_SV_types_lengths/private_genic_SVs_length.csv", sep = ",", header = T) %>%
+              rename_all(toupper)
+             
+
+
+
+png(file = "private_genic_SVs_lengths.png", width = 3500, height = 1800, res = 300)
+
+
+
+# sv_lengths %>% group_by(LENGTH) %>%
+              # mutate(LENGTH = factor(LENGTH), levels = unique(LENGTH)) %>%
+sv_lengths %>% group_by(MICE_LINE) %>% 
+              ggplot(aes(x = LENGTH, fill = SV_TYPE)) +
+              geom_bar(position = "stack", stat = "count") +
+              scale_fill_manual(values = c("cornflowerblue", "brown1", "darkgoldenrod1"), name = "SV type") +
+              scale_x_binned() +
+              # scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) +
+              labs(x = "SV size bins", y = "Number of SVs") +
+              theme_light() +
+              theme(axis.title.x = element_text(size = 8, vjust = -0.90),
+                  axis.title.y = element_text(size = 8, vjust = 1.90),
+                  legend.margin = margin(0.5, 0.5, 0.5,0.5)) +
+              theme(plot.title = element_text(size = 10,
+                  margin = margin(0, 0, 6, 0))) +
+              facet_grid(. ~ SV_TYPE, scales= "free_y") +
+              facet_wrap(. ~ MICE_LINE, ncol = 3, nrow = 2, scales= "free_y") # allow diff. scales in plot,
+  
+
+
+
+dev.off() 
+
+
+
+```
+
+
+```{r patchwork}
+
+# works only for ggplots
+
+```
